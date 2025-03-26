@@ -51,6 +51,20 @@ ctr_models = {
     "Informational": {1: 0.35, 2: 0.25, 3: 0.15, 4: 0.10, 5: 0.08, 6: 0.05, 7: 0.04, 8: 0.03, 9: 0.02, 10: 0.01, 11: 0.005, 20: 0.003, 21: 0.001}
 }
 
+# CTR calculation function with support for different models
+def get_ctr(position, ctr_table):
+    position = int(position)
+    if position in ctr_table:
+        return ctr_table[position]
+    # Interpolate or use the closest higher position
+    for i in range(position, 0, -1):
+        if i in ctr_table:
+            return ctr_table[i]
+    for i in range(position, 100):
+        if i in ctr_table:
+            return ctr_table[i]
+    return 0.005  # Default for positions beyond 20
+
 # Settings with tooltips
 category = st.sidebar.selectbox(
     "Product Category",
@@ -350,20 +364,6 @@ with st.expander("Adjust Conversion Rate"):
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
-
-# CTR calculation function with support for different models
-def get_ctr(position, ctr_table):
-    position = int(position)
-    if position in ctr_table:
-        return ctr_table[position]
-    # Interpolate or use the closest higher position
-    for i in range(position, 0, -1):
-        if i in ctr_table:
-            return ctr_table[i]
-    for i in range(position, 100):
-        if i in ctr_table:
-            return ctr_table[i]
-    return 0.005  # Default for positions beyond 20
 
 # Calculate button
 calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
