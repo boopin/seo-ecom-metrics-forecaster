@@ -304,10 +304,13 @@ with st.expander("Adjust Conversion Rate"):
             conversion_range = np.linspace(min_conversion, max_conversion, steps)
             what_if_data = []
 
+            # Get the CTR table for the selected model
+            selected_ctr_table = ctr_models[ctr_model]
+
             for cr in conversion_range:
                 keywords = st.session_state.keywords.copy()
-                current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, ctr_model)) * keywords['searchVolume']
-                target_traffic = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, ctr_model)) * keywords['searchVolume']
+                current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
+                target_traffic = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
                 traffic_gain = target_traffic - current_traffic
                 conversion_gain = traffic_gain * (cr / 100)
                 revenue_gain = conversion_gain * aov
@@ -348,12 +351,8 @@ with st.expander("Adjust Conversion Rate"):
             )
             st.plotly_chart(fig, use_container_width=True)
 
-# Calculate button
-calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
-
 # CTR calculation function with support for different models
-def get_ctr(position, model_name):
-    ctr_table = ctr_models[model_name]
+def get_ctr(position, ctr_table):
     position = int(position)
     if position in ctr_table:
         return ctr_table[position]
@@ -366,11 +365,16 @@ def get_ctr(position, model_name):
             return ctr_table[i]
     return 0.005  # Default for positions beyond 20
 
+# Calculate button
+calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
+
 if calculate_button:
     if len(st.session_state.keywords) > 0:
         keywords = st.session_state.keywords.copy()
-        keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, ctr_model))
-        keywords['targetCTR'] = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, ctr_model))
+        # Get the CTR table for the selected model
+        selected_ctr_table = ctr_models[ctr_model]
+        keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+        keywords['targetCTR'] = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
         keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
         keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
         keywords['trafficGain'] = keywords['targetTraffic'] - keywords['currentTraffic']
