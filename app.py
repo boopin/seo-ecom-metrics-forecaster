@@ -123,7 +123,8 @@ if st.sidebar.button("Reset to Defaults"):
         "keyword": ["gas bbq", "charcoal bbq", "bbq grill"],
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
-        "targetPosition": [3, 5, 4]
+        "targetPosition": [3, 5, 4],
+        "competitorDifficulty": [5, 5, 5]  # Added default competitor difficulty
     })
     st.experimental_rerun()
 
@@ -147,13 +148,14 @@ with col2:
     st.markdown("- Search Volume")
     st.markdown("- Current Position (optional)")
 
-# Initialize data
+# Initialize data with competitor difficulty
 if 'keywords' not in st.session_state:
     st.session_state.keywords = pd.DataFrame({
         "keyword": ["gas bbq", "charcoal bbq", "bbq grill"],
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
-        "targetPosition": [3, 5, 4]
+        "targetPosition": [3, 5, 4],
+        "competitorDifficulty": [5, 5, 5]  # Added default competitor difficulty
     })
 
 # Process uploaded file
@@ -168,6 +170,7 @@ if uploaded_file is not None:
         keyword_cols = ["keyword", "term", "query", "search term"]
         volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
         position_cols = ["position", "rank", "ranking", "pos", "serp"]
+        difficulty_cols = ["difficulty", "competitor difficulty", "comp difficulty", "seo difficulty"]
         
         # Find the right columns (case insensitive)
         df.columns = df.columns.str.lower()
@@ -177,6 +180,8 @@ if uploaded_file is not None:
                         df.columns[1] if len(df.columns) > 1 else None)
         position_col = next((col for col in df.columns if any(pos in col for pos in position_cols)), 
                           df.columns[2] if len(df.columns) > 2 else None)
+        difficulty_col = next((col for col in df.columns if any(diff in col for diff in difficulty_cols)), 
+                              None)
         
         # Create new dataframe
         new_df = pd.DataFrame()
@@ -195,6 +200,12 @@ if uploaded_file is not None:
         # Calculate target position - improve by 50% but not below 1
         new_df['targetPosition'] = new_df['position'].apply(lambda x: max(1, int(x * 0.5)))
         
+        # Add competitor difficulty (default to 5 if not in file)
+        if difficulty_col:
+            new_df['competitorDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
+        else:
+            new_df['competitorDifficulty'] = 5
+        
         st.session_state.keywords = new_df
         st.success(f"Successfully imported {len(new_df)} keywords!")
         
@@ -206,7 +217,7 @@ st.header("Keywords")
 
 # Add new keyword form with tooltips
 with st.expander("Add New Keyword"):
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         new_keyword = st.text_input(
             "Keyword",
@@ -230,6 +241,12 @@ with st.expander("Add New Keyword"):
             1, 100, 5,
             help="The desired ranking position to achieve (1-100, typically better than the current position)."
         )
+    with col5:
+        new_difficulty = st.number_input(
+            "Competitor Difficulty",
+            1, 10, 5,
+            help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
+        )
         
     if st.button("Add Keyword"):
         if new_keyword:
@@ -237,7 +254,8 @@ with st.expander("Add New Keyword"):
                 "keyword": [new_keyword],
                 "searchVolume": [new_volume],
                 "position": [new_position],
-                "targetPosition": [new_target]
+                "targetPosition": [new_target],
+                "competitorDifficulty": [new_difficulty]
             })
             st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
             st.success("Keyword added!")
@@ -284,6 +302,13 @@ edited_df = st.data_editor(
             max_value=100,
             step=1,
             help="The desired ranking position to achieve (1-100)."
+        ),
+        "competitorDifficulty": st.column_config.NumberColumn(
+            "Competitor Difficulty",
+            min_value=1,
+            max_value=10,
+            step=1,
+            help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
         )
     },
     use_container_width=True
@@ -323,8 +348,12 @@ with st.expander("Adjust Conversion Rate"):
 
             for cr in conversion_range:
                 keywords = st.session_state.keywords.copy()
+                # Adjust target position based on competitor difficulty
+                keywords['adjustedTargetPosition'] = keywords.apply(
+                    lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['competitorDifficulty'] / 10))), axis=1
+                )
                 current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
-                target_traffic = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
+                target_traffic = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
                 traffic_gain = target_traffic - current_traffic
                 conversion_gain = traffic_gain * (cr / 100)
                 revenue_gain = conversion_gain * aov
@@ -374,14 +403,41 @@ if calculate_button:
         # Get the CTR table for the selected model
         selected_ctr_table = ctr_models[ctr_model]
         keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
-        keywords['targetCTR'] = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+        # Adjust target position based on competitor difficulty
+        keywords['adjustedTargetPosition'] = keywords.apply(
+            lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['competitorDifficulty'] / 10))), axis=1
+        )
+        keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
         keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
         keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
         keywords['trafficGain'] = keywords['targetTraffic'] - keywords['currentTraffic']
         keywords['conversionGain'] = keywords['trafficGain'] * (conversion_rate / 100)
         keywords['revenueGain'] = keywords['conversionGain'] * aov
         
-        # Display summary metrics
+        # Add confidence intervals
+        ctr_std = 0.10  # Assume 10% standard deviation for CTR
+        z_score = 1.96  # For 95% confidence interval
+        keywords['currentCTR_std'] = keywords['currentCTR'] * ctr_std
+        keywords['targetCTR_std'] = keywords['targetCTR'] * ctr_std
+        keywords['currentTraffic_std'] = keywords['searchVolume'] * keywords['currentCTR_std']
+        keywords['targetTraffic_std'] = keywords['searchVolume'] * keywords['targetCTR_std']
+        keywords['trafficGain_std'] = np.sqrt(keywords['currentTraffic_std']**2 + keywords['targetTraffic_std']**2)
+        total_traffic_gain = keywords['trafficGain'].sum()
+        total_traffic_gain_std = np.sqrt((keywords['trafficGain_std']**2).sum())
+        traffic_ci_lower = total_traffic_gain - z_score * total_traffic_gain_std
+        traffic_ci_upper = total_traffic_gain + z_score * total_traffic_gain_std
+        
+        total_conversion_gain = keywords['conversionGain'].sum()
+        total_conversion_gain_std = total_traffic_gain_std * (conversion_rate / 100)
+        conversion_ci_lower = total_conversion_gain - z_score * total_conversion_gain_std
+        conversion_ci_upper = total_conversion_gain + z_score * total_conversion_gain_std
+        
+        total_revenue_gain = keywords['revenueGain'].sum()
+        total_revenue_gain_std = total_conversion_gain_std * aov
+        revenue_ci_lower = total_revenue_gain - z_score * total_revenue_gain_std
+        revenue_ci_upper = total_revenue_gain + z_score * total_revenue_gain_std
+        
+        # Display summary metrics with confidence intervals
         st.header("Forecast Results")
         
         col1, col2, col3 = st.columns(3)
@@ -392,14 +448,14 @@ if calculate_button:
         revenue_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['revenueGain'].sum() / (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) * 100
         
         with col1:
-            st.metric("Total Traffic Gain", f"{int(keywords['trafficGain'].sum()):,}", 
-                    f"+{traffic_percent:.1f}%")
+            st.metric("Total Traffic Gain", f"{int(total_traffic_gain):,}", 
+                      f"+{traffic_percent:.1f}% (95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,})")
         with col2:
-            st.metric("Total Conversion Gain", f"{keywords['conversionGain'].sum():.1f}", 
-                    f"+{conv_percent:.1f}%")
+            st.metric("Total Conversion Gain", f"{total_conversion_gain:.1f}", 
+                      f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:.1f} - {conversion_ci_upper:.1f})")
         with col3:
-            st.metric("Total Revenue Gain", f"{currency_symbol}{int(keywords['revenueGain'].sum()):,}", 
-                    f"+{revenue_percent:.1f}%")
+            st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
+                      f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
         
         # Generate monthly projections
         st.header(f"Monthly Projections ({projection_months} Months)")
@@ -470,7 +526,8 @@ if calculate_button:
                 "Monthly ROI": roi,
                 "Cumulative ROI": cumulative_roi,
                 "ROI": f"{roi:.1f}%",
-                "Cumulative": f"{cumulative_roi:.1f}%"
+                "Cumulative": f"{cumulative_roi:.1f}%",
+                "Cumulative Revenue": cumulative_revenue  # Added for break-even analysis
             })
         
         # Add total row
@@ -485,7 +542,8 @@ if calculate_button:
             "Monthly ROI": None,
             "Cumulative ROI": cumulative_roi,
             "ROI": "",
-            "Cumulative": f"{cumulative_roi:.1f}%"
+            "Cumulative": f"{cumulative_roi:.1f}%",
+            "Cumulative Revenue": cumulative_revenue
         })
         
         # Display monthly projections
@@ -506,6 +564,19 @@ if calculate_button:
             },
             use_container_width=True
         )
+        
+        # Break-Even Analysis
+        st.subheader("Break-Even Analysis")
+        break_even_month = None
+        for i, row in enumerate(monthly_data[:-1]):  # Exclude the total row
+            if row['Cumulative Revenue'] >= implementation_cost and break_even_month is None:
+                break_even_month = i + 1
+                break
+        
+        if break_even_month:
+            st.write(f"Break-even point reached in month {break_even_month} with a cumulative revenue of {currency_symbol}{int(monthly_data[break_even_month-1]['Cumulative Revenue']):,}")
+        else:
+            st.write(f"Break-even point not reached within {projection_months} months. Final cumulative revenue: {currency_symbol}{int(cumulative_revenue):,}")
         
         # Create visualization with plotly
         st.subheader("Monthly Projection Chart")
@@ -554,13 +625,15 @@ if calculate_button:
         keyword_display['Revenue Gain'] = currency_symbol + keyword_display['revenueGain'].round(0).astype(int).astype(str)
         
         st.dataframe(
-            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']],
+            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'competitorDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']],
             hide_index=True,
             column_config={
                 "keyword": "Keyword",
                 "searchVolume": st.column_config.NumberColumn("Search Volume", format="%d"),
                 "position": "Current Position",
                 "targetPosition": "Target Position",
+                "competitorDifficulty": "Competitor Difficulty",
+                "adjustedTargetPosition": "Adjusted Target Position",
                 "Current Traffic": st.column_config.NumberColumn("Current Traffic", format="%d"),
                 "Target Traffic": st.column_config.NumberColumn("Target Traffic", format="%d"),
                 "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
@@ -570,7 +643,7 @@ if calculate_button:
         )
         
         # Download button for results
-        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']].to_csv(index=False).encode('utf-8')
+        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'competitorDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Download Results as CSV",
             data=csv,
