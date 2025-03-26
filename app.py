@@ -361,7 +361,7 @@ with st.expander("Adjust Conversion Rate"):
                 what_if_data.append({
                     "Conversion Rate (%)": cr,
                     "Traffic Gain": int(traffic_gain.sum()),
-                    "Conversion Gain": int(round(conversion_gain.sum())),  # Rounded to whole number
+                    "Conversion Gain": int(round(conversion_gain.sum())),
                     "Revenue Gain": f"{currency_symbol}{int(revenue_gain.sum()):,}"
                 })
 
@@ -372,7 +372,7 @@ with st.expander("Adjust Conversion Rate"):
                 column_config={
                     "Conversion Rate (%)": st.column_config.NumberColumn("Conversion Rate (%)", format="%.1f"),
                     "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
-                    "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),  # Updated format to whole number
+                    "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),
                     "Revenue Gain": "Revenue Gain"
                 },
                 use_container_width=True
@@ -427,20 +427,23 @@ if calculate_button:
         traffic_ci_lower = total_traffic_gain - z_score * total_traffic_gain_std
         traffic_ci_upper = total_traffic_gain + z_score * total_traffic_gain_std
         
-        total_conversion_gain = int(round(keywords['conversionGain'].sum()))  # Rounded to whole number
+        total_conversion_gain = int(round(keywords['conversionGain'].sum()))
         total_conversion_gain_std = total_traffic_gain_std * (conversion_rate / 100)
-        conversion_ci_lower = int(round(total_conversion_gain - z_score * total_conversion_gain_std))  # Rounded to whole number
-        conversion_ci_upper = int(round(total_conversion_gain + z_score * total_conversion_gain_std))  # Rounded to whole number
+        conversion_ci_lower = int(round(total_conversion_gain - z_score * total_conversion_gain_std))
+        conversion_ci_upper = int(round(total_conversion_gain + z_score * total_conversion_gain_std))
         
-        total_revenue_gain = total_conversion_gain * aov  # Updated to use rounded conversions
+        total_revenue_gain = total_conversion_gain * aov
         total_revenue_gain_std = total_conversion_gain_std * aov
         revenue_ci_lower = total_revenue_gain - z_score * total_revenue_gain_std
         revenue_ci_upper = total_revenue_gain + z_score * total_revenue_gain_std
         
+        # Calculate CPA (Cost Per Acquisition)
+        cpa = implementation_cost / total_conversion_gain if total_conversion_gain > 0 else float('inf')
+        
         # Display summary metrics with confidence intervals
         st.header("Forecast Results")
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)  # Added a fourth column for CPA
         
         # Calculate percentage changes safely
         traffic_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['trafficGain'].sum() / keywords['currentTraffic'].sum() * 100
@@ -451,11 +454,13 @@ if calculate_button:
             st.metric("Total Traffic Gain", f"{int(total_traffic_gain):,}", 
                       f"+{traffic_percent:.1f}% (95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,})")
         with col2:
-            st.metric("Total Conversion Gain", f"{total_conversion_gain:,}",  # No decimal places
+            st.metric("Total Conversion Gain", f"{total_conversion_gain:,}", 
                       f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:,} - {conversion_ci_upper:,})")
         with col3:
             st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
                       f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
+        with col4:
+            st.metric("Cost Per Acquisition (CPA)", Ascending", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
         
         # Break-Even Analysis
         st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
@@ -478,10 +483,14 @@ if calculate_button:
             month_idx = (current_month + i) % 12
             month_name = pd.Timestamp(year=2023, month=month_idx+1, day=1).strftime('%b')
             progress = i / (projection_months - 1) if projection_months > 1 else 1
-            growth_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
+            # Updated growth factor with keyword difficulty and lag
+            avg_difficulty = keywords['keywordDifficulty'].mean()
+            k = 10 / (1 + avg_difficulty / 2)  # Slower growth for higher difficulty
+            delay = 0.2  # 2-month lag (0.2 of the projection period)
+            growth_factor = 1 / (1 + np.exp(-k * (progress - delay)))
             season_factor = seasonality[category][month_idx]
             month_factor = growth_factor * season_factor
-            traffic_gain = total_traffic_gain * month_factor / sum([1 / (1 + np.exp(-10 * (j / (projection_months - 1) - 0.5))) * 
+            traffic_gain = total_traffic_gain * month_factor / sum([1 / (1 + np.exp(-k * (j / (projection_months - 1) - delay))) * 
                                                                  seasonality[category][(current_month + j) % 12] 
                                                                  for j in range(projection_months)])
             conversion_gain = traffic_gain * (conversion_rate / 100)
@@ -522,42 +531,49 @@ if calculate_button:
                 unsafe_allow_html=True
             )
         
+        # Break-Even Progress Chart
+        break_even_df = pd.DataFrame(monthly_data_temp)
+        fig = px.line(
+            break_even_df,
+            x="Month",
+            y="Cumulative Revenue",
+            title="Break-Even Progress Over Time",
+            labels={"Cumulative Revenue": f"Cumulative Revenue ({currency_symbol})"},
+            template="plotly_white"
+        )
+        fig.add_hline(y=implementation_cost, line_dash="dash", line_color="red", 
+                      annotation_text="Break-Even Point", annotation_position="top right")
+        fig.update_traces(mode="lines+markers")
+        fig.update_layout(
+            yaxis_title=f"Cumulative Revenue ({currency_symbol})",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
         # Generate monthly projections
         st.header(f"Monthly Projections ({projection_months} Months)")
         
-        # Define seasonality factors (already defined above, reusing for clarity)
         monthly_data = []
         cumulative_traffic = 0
         cumulative_conversions = 0
         cumulative_revenue = 0
         
         for i in range(projection_months):
-            # Calculate month index
             month_idx = (current_month + i) % 12
             month_name = pd.Timestamp(year=2023, month=month_idx+1, day=1).strftime('%b')
-            
-            # Calculate growth factor using sigmoid function
             progress = i / (projection_months - 1) if projection_months > 1 else 1
-            growth_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
-            
-            # Get seasonal factor
+            # Updated growth factor with keyword difficulty and lag
+            growth_factor = 1 / (1 + np.exp(-k * (progress - delay)))
             season_factor = seasonality[category][month_idx]
-            
-            # Calculate gains for this month
             month_factor = growth_factor * season_factor
-            traffic_gain = total_traffic_gain * month_factor / sum([1 / (1 + np.exp(-10 * (j / (projection_months - 1) - 0.5))) * 
+            traffic_gain = total_traffic_gain * month_factor / sum([1 / (1 + np.exp(-k * (j / (projection_months - 1) - delay))) * 
                                                                  seasonality[category][(current_month + j) % 12] 
                                                                  for j in range(projection_months)])
-            
-            conversion_gain = int(round(traffic_gain * (conversion_rate / 100)))  # Rounded to whole number
-            revenue_gain = conversion_gain * aov  # Updated to use rounded conversions
-            
-            # Update cumulative metrics
+            conversion_gain = int(round(traffic_gain * (conversion_rate / 100)))
+            revenue_gain = conversion_gain * aov
             cumulative_traffic += traffic_gain
             cumulative_conversions += conversion_gain
             cumulative_revenue += revenue_gain
-            
-            # Calculate ROI
             monthly_cost = implementation_cost if i == 0 else 0
             roi = ((revenue_gain - monthly_cost) / implementation_cost) * 100
             cumulative_roi = ((cumulative_revenue - implementation_cost) / implementation_cost) * 100
@@ -567,7 +583,7 @@ if calculate_button:
                 "Growth Factor": growth_factor,
                 "Seasonal Factor": season_factor,
                 "Traffic Gain": int(traffic_gain),
-                "Conversion Gain": conversion_gain,  # Already rounded
+                "Conversion Gain": conversion_gain,
                 "Revenue Gain": int(revenue_gain),
                 "Revenue": f"{currency_symbol}{int(revenue_gain):,}",
                 "Monthly ROI": roi,
@@ -583,7 +599,7 @@ if calculate_button:
             "Growth Factor": None,
             "Seasonal Factor": None,
             "Traffic Gain": int(cumulative_traffic),
-            "Conversion Gain": int(cumulative_conversions),  # Sum of rounded values
+            "Conversion Gain": int(cumulative_conversions),
             "Revenue Gain": int(cumulative_revenue),
             "Revenue": f"{currency_symbol}{int(cumulative_revenue):,}",
             "Monthly ROI": None,
@@ -597,14 +613,13 @@ if calculate_button:
         monthly_df = pd.DataFrame(monthly_data)
         display_df = monthly_df[["Month", "Traffic Gain", "Conversion Gain", "Revenue", "ROI", "Cumulative"]].copy()
         
-        # Format the metrics
         st.dataframe(
             display_df,
             hide_index=True,
             column_config={
                 "Month": "Month",
                 "Traffic Gain": st.column_config.NumberColumn("Traffic", format="%d"),
-                "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),  # Updated format to whole number
+                "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),
                 "Revenue": "Revenue",
                 "ROI": "Monthly ROI",
                 "Cumulative": "Cumulative ROI"
@@ -616,18 +631,14 @@ if calculate_button:
         st.subheader("Monthly Projection Chart")
         
         fig = px.line(
-            monthly_df[:-1],  # Exclude the total row
+            monthly_df[:-1],
             x="Month",
             y=["Traffic Gain", "Revenue Gain"],
             title=f"SEO Performance Forecast for {projection_months} Months",
             labels={"value": "Metric Value", "variable": "Metric"},
             template="plotly_white"
         )
-        
-        # Add markers to the lines
         fig.update_traces(mode="lines+markers")
-        
-        # Update y-axis titles
         fig.update_layout(
             yaxis_title="Traffic",
             yaxis2=dict(
@@ -636,8 +647,6 @@ if calculate_button:
                 side="right"
             )
         )
-        
-        # Customize the legend
         fig.update_layout(legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -645,13 +654,11 @@ if calculate_button:
             xanchor="right",
             x=1
         ))
-        
         st.plotly_chart(fig, use_container_width=True)
         
         # Keyword details
         st.header("Keyword Details")
         
-        # Format data for display
         keyword_display = keywords.copy()
         keyword_display['Current Traffic'] = keyword_display['currentTraffic'].round(0).astype(int)
         keyword_display['Target Traffic'] = keyword_display['targetTraffic'].round(0).astype(int)
