@@ -443,6 +443,37 @@ if calculate_button:
         # Display summary metrics with confidence intervals
         st.header("Forecast Results")
         
+        # Add CSS for tooltips
+        st.markdown("""
+            <style>
+            .tooltip {
+                position: relative;
+                display: inline-block;
+                cursor: pointer;
+            }
+            .tooltip .tooltiptext {
+                visibility: hidden;
+                width: 220px;
+                background-color: #555;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -110px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .tooltip:hover .tooltiptext {
+                visibility: visible;
+                opacity: 1;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
         col1, col2, col3, col4 = st.columns(4)  # Added a fourth column for CPA
         
         # Calculate percentage changes safely
@@ -451,16 +482,32 @@ if calculate_button:
         revenue_percent = 0 if keywords['currentTraffic'].sum() == 0 else (total_revenue_gain / (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) * 100) if (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) != 0 else 0
         
         with col1:
-            st.metric("Total Traffic Gain", f"{int(total_traffic_gain):,}", 
+            st.markdown("""
+                <div class="tooltip">Total Traffic Gain
+                    <span class="tooltiptext">This range shows where we expect the true traffic gain to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
+                </div>
+            """, unsafe_allow_html=True)
+            st.metric("", f"{int(total_traffic_gain):,}", 
                       f"+{traffic_percent:.1f}% (95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,})")
         with col2:
-            st.metric("Total Conversion Gain", f"{total_conversion_gain:,}", 
+            st.markdown("""
+                <div class="tooltip">Total Conversion Gain
+                    <span class="tooltiptext">This range shows where we expect the true number of conversions to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
+                </div>
+            """, unsafe_allow_html=True)
+            st.metric("", f"{total_conversion_gain:,}", 
                       f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:,} - {conversion_ci_upper:,})")
         with col3:
-            st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
+            st.markdown("""
+                <div class="tooltip">Total Revenue Gain
+                    <span class="tooltiptext">This range shows where we expect the true revenue gain to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
+                </div>
+            """, unsafe_allow_html=True)
+            st.metric("", f"{currency_symbol}{int(total_revenue_gain):,}", 
                       f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
         with col4:
-            st.metric("Cost Per Acquisition (CPA)", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
+            st.markdown("Cost Per Acquisition (CPA)")
+            st.metric("", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
         
         # Break-Even Analysis
         st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
