@@ -124,7 +124,7 @@ if st.sidebar.button("Reset to Defaults"):
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
         "targetPosition": [3, 5, 4],
-        "keywordDifficulty": [5, 5, 5]  # Updated to keywordDifficulty
+        "keywordDifficulty": [5, 5, 5]
     })
     st.experimental_rerun()
 
@@ -155,7 +155,7 @@ if 'keywords' not in st.session_state:
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
         "targetPosition": [3, 5, 4],
-        "keywordDifficulty": [5, 5, 5]  # Updated to keywordDifficulty
+        "keywordDifficulty": [5, 5, 5]
     })
 
 # Process uploaded file
@@ -170,7 +170,7 @@ if uploaded_file is not None:
         keyword_cols = ["keyword", "term", "query", "search term"]
         volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
         position_cols = ["position", "rank", "ranking", "pos", "serp"]
-        difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]  # Updated to keyword difficulty
+        difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]
         
         # Find the right columns (case insensitive)
         df.columns = df.columns.str.lower()
@@ -361,7 +361,7 @@ with st.expander("Adjust Conversion Rate"):
                 what_if_data.append({
                     "Conversion Rate (%)": cr,
                     "Traffic Gain": int(traffic_gain.sum()),
-                    "Conversion Gain": round(conversion_gain.sum(), 1),
+                    "Conversion Gain": int(round(conversion_gain.sum())),  # Rounded to whole number
                     "Revenue Gain": f"{currency_symbol}{int(revenue_gain.sum()):,}"
                 })
 
@@ -372,7 +372,7 @@ with st.expander("Adjust Conversion Rate"):
                 column_config={
                     "Conversion Rate (%)": st.column_config.NumberColumn("Conversion Rate (%)", format="%.1f"),
                     "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
-                    "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%.1f"),
+                    "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),  # Updated format to whole number
                     "Revenue Gain": "Revenue Gain"
                 },
                 use_container_width=True
@@ -427,12 +427,12 @@ if calculate_button:
         traffic_ci_lower = total_traffic_gain - z_score * total_traffic_gain_std
         traffic_ci_upper = total_traffic_gain + z_score * total_traffic_gain_std
         
-        total_conversion_gain = keywords['conversionGain'].sum()
+        total_conversion_gain = int(round(keywords['conversionGain'].sum()))  # Rounded to whole number
         total_conversion_gain_std = total_traffic_gain_std * (conversion_rate / 100)
-        conversion_ci_lower = total_conversion_gain - z_score * total_conversion_gain_std
-        conversion_ci_upper = total_conversion_gain + z_score * total_conversion_gain_std
+        conversion_ci_lower = int(round(total_conversion_gain - z_score * total_conversion_gain_std))  # Rounded to whole number
+        conversion_ci_upper = int(round(total_conversion_gain + z_score * total_conversion_gain_std))  # Rounded to whole number
         
-        total_revenue_gain = keywords['revenueGain'].sum()
+        total_revenue_gain = total_conversion_gain * aov  # Updated to use rounded conversions
         total_revenue_gain_std = total_conversion_gain_std * aov
         revenue_ci_lower = total_revenue_gain - z_score * total_revenue_gain_std
         revenue_ci_upper = total_revenue_gain + z_score * total_revenue_gain_std
@@ -444,20 +444,20 @@ if calculate_button:
         
         # Calculate percentage changes safely
         traffic_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['trafficGain'].sum() / keywords['currentTraffic'].sum() * 100
-        conv_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['conversionGain'].sum() / (keywords['currentTraffic'].sum() * conversion_rate / 100) * 100
-        revenue_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['revenueGain'].sum() / (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) * 100
+        conv_percent = 0 if keywords['currentTraffic'].sum() == 0 else (total_conversion_gain / (keywords['currentTraffic'].sum() * conversion_rate / 100) * 100) if (keywords['currentTraffic'].sum() * conversion_rate / 100) != 0 else 0
+        revenue_percent = 0 if keywords['currentTraffic'].sum() == 0 else (total_revenue_gain / (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) * 100) if (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) != 0 else 0
         
         with col1:
             st.metric("Total Traffic Gain", f"{int(total_traffic_gain):,}", 
                       f"+{traffic_percent:.1f}% (95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,})")
         with col2:
-            st.metric("Total Conversion Gain", f"{total_conversion_gain:.1f}", 
-                      f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:.1f} - {conversion_ci_upper:.1f})")
+            st.metric("Total Conversion Gain", f"{total_conversion_gain:,}",  # No decimal places
+                      f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:,} - {conversion_ci_upper:,})")
         with col3:
             st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
                       f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
         
-        # Break-Even Analysis (Moved and Enhanced)
+        # Break-Even Analysis
         st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
         # Calculate monthly projections for break-even analysis
         monthly_data_temp = []
@@ -549,8 +549,8 @@ if calculate_button:
                                                                  seasonality[category][(current_month + j) % 12] 
                                                                  for j in range(projection_months)])
             
-            conversion_gain = traffic_gain * (conversion_rate / 100)
-            revenue_gain = conversion_gain * aov
+            conversion_gain = int(round(traffic_gain * (conversion_rate / 100)))  # Rounded to whole number
+            revenue_gain = conversion_gain * aov  # Updated to use rounded conversions
             
             # Update cumulative metrics
             cumulative_traffic += traffic_gain
@@ -567,7 +567,7 @@ if calculate_button:
                 "Growth Factor": growth_factor,
                 "Seasonal Factor": season_factor,
                 "Traffic Gain": int(traffic_gain),
-                "Conversion Gain": round(conversion_gain, 1),
+                "Conversion Gain": conversion_gain,  # Already rounded
                 "Revenue Gain": int(revenue_gain),
                 "Revenue": f"{currency_symbol}{int(revenue_gain):,}",
                 "Monthly ROI": roi,
@@ -583,7 +583,7 @@ if calculate_button:
             "Growth Factor": None,
             "Seasonal Factor": None,
             "Traffic Gain": int(cumulative_traffic),
-            "Conversion Gain": round(cumulative_conversions, 1),
+            "Conversion Gain": int(cumulative_conversions),  # Sum of rounded values
             "Revenue Gain": int(cumulative_revenue),
             "Revenue": f"{currency_symbol}{int(cumulative_revenue):,}",
             "Monthly ROI": None,
@@ -604,7 +604,7 @@ if calculate_button:
             column_config={
                 "Month": "Month",
                 "Traffic Gain": st.column_config.NumberColumn("Traffic", format="%d"),
-                "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%.1f"),
+                "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%d"),  # Updated format to whole number
                 "Revenue": "Revenue",
                 "ROI": "Monthly ROI",
                 "Cumulative": "Cumulative ROI"
