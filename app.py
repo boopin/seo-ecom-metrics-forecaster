@@ -8,30 +8,110 @@ from io import StringIO
 
 # Page configuration
 st.set_page_config(
-    page_title="SEO Forecasting Tool",
+    page_title="EcomSEO Predictor",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# App title
-st.title("SEO Forecasting Tool")
-st.markdown("Forecast traffic, conversions, and revenue based on keyword ranking improvements")
+# App title with styling
+st.markdown("""
+    <div style='display: flex; align-items: center; margin-bottom: 8px;'>
+        <svg style='height: 24px; width: 24px; color: #2563eb; margin-right: 8px;' fill='none' stroke='currentColor' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
+            <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2V9a2 2 0 00-2-2h-2a2 2 0 00-2 2v10'></path>
+        </svg>
+        <span style='font-size: 14px; color: #2563eb;'>Powered by Boopin</span>
+    </div>
+    <h1 style='font-size: 2.25rem; font-weight: bold; margin-bottom: 16px;'>EcomSEO Predictor</h1>
+    <p style='margin-bottom: 16px; color: #4b5563; font-style: italic;'>Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.</p>
+""", unsafe_allow_html=True)
 
 # Sidebar for settings
 st.sidebar.header("Settings")
+
+# Default settings for reset functionality
+default_settings = {
+    "category": "BBQ & Outdoor Cooking",
+    "projection_months": 6,
+    "conversion_rate": 3.0,
+    "currency_selection": "GBP (£)",
+    "aov": 250,
+    "implementation_cost": 5000,
+    "ctr_model": "Default"
+}
+
+# Initialize session state for settings if not already present
+if 'settings' not in st.session_state:
+    st.session_state.settings = default_settings.copy()
+
+# Define CTR models
+ctr_models = {
+    "Default": {1: 0.25, 2: 0.15, 3: 0.10, 4: 0.07, 5: 0.07, 6: 0.03, 7: 0.03, 8: 0.03, 9: 0.03, 10: 0.03, 11: 0.01, 20: 0.01, 21: 0.005},
+    "E-commerce": {1: 0.30, 2: 0.20, 3: 0.12, 4: 0.08, 5: 0.06, 6: 0.04, 7: 0.03, 8: 0.02, 9: 0.02, 10: 0.01, 11: 0.008, 20: 0.005, 21: 0.002},
+    "Informational": {1: 0.35, 2: 0.25, 3: 0.15, 4: 0.10, 5: 0.08, 6: 0.05, 7: 0.04, 8: 0.03, 9: 0.02, 10: 0.01, 11: 0.005, 20: 0.003, 21: 0.001}
+}
+
+# Settings with tooltips
 category = st.sidebar.selectbox(
     "Product Category",
     ["BBQ & Outdoor Cooking", "Christmas & Seasonal", "Fashion & Apparel", 
-     "Electronics & Technology", "Gardening & Outdoor", "Furniture & Home"]
+     "Electronics & Technology", "Gardening & Outdoor", "Furniture & Home"],
+    help="Select the product category to apply seasonal trends to your forecast."
 )
-projection_months = st.sidebar.radio("Projection Period", [6, 12])
-conversion_rate = st.sidebar.slider("Conversion Rate (%)", 0.1, 10.0, 3.0, 0.1)
+projection_months = st.sidebar.radio(
+    "Projection Period",
+    [6, 12],
+    help="Choose the number of months for the forecast (6 or 12 months)."
+)
+conversion_rate = st.sidebar.slider(
+    "Conversion Rate (%)",
+    0.1, 10.0, st.session_state.settings["conversion_rate"], 0.1,
+    help="The percentage of visitors who make a purchase (e.g., 3% means 3 out of 100 visitors convert)."
+)
 currency_options = {"GBP (£)": "£", "EUR (€)": "€", "USD ($)": "$", "AED (د.إ)": "د.إ", "SAR (﷼)": "﷼"}
-currency_selection = st.sidebar.selectbox("Currency", list(currency_options.keys()))
+currency_selection = st.sidebar.selectbox(
+    "Currency",
+    list(currency_options.keys()),
+    help="Select the currency for revenue calculations."
+)
 currency_symbol = currency_options[currency_selection]
-aov = st.sidebar.number_input(f"Average Order Value ({currency_symbol})", 10, 1000, 250, 10)
-implementation_cost = st.sidebar.number_input(f"Implementation Cost ({currency_symbol})", 100, 20000, 5000, 100)
+aov = st.sidebar.number_input(
+    f"Average Order Value ({currency_symbol})",
+    10, 1000, st.session_state.settings["aov"], 10,
+    help=f"The average amount spent per order in {currency_symbol} (e.g., if a customer typically spends {currency_symbol}250 per purchase, enter 250)."
+)
+implementation_cost = st.sidebar.number_input(
+    f"Implementation Cost ({currency_symbol})",
+    100, 20000, st.session_state.settings["implementation_cost"], 100,
+    help=f"The total cost of implementing the SEO strategy in {currency_symbol} (e.g., agency fees, content creation)."
+)
+ctr_model = st.sidebar.selectbox(
+    "CTR Model",
+    list(ctr_models.keys()),
+    help="Select the Click-Through Rate (CTR) model based on your industry. E-commerce sites typically have higher CTRs for top positions, while informational sites have higher CTRs overall but drop off faster."
+)
+
+# Update session state settings
+st.session_state.settings.update({
+    "category": category,
+    "projection_months": projection_months,
+    "conversion_rate": conversion_rate,
+    "currency_selection": currency_selection,
+    "aov": aov,
+    "implementation_cost": implementation_cost,
+    "ctr_model": ctr_model
+})
+
+# Reset to Defaults button
+if st.sidebar.button("Reset to Defaults"):
+    st.session_state.settings = default_settings.copy()
+    st.session_state.keywords = pd.DataFrame({
+        "keyword": ["gas bbq", "charcoal bbq", "bbq grill"],
+        "searchVolume": [8000, 6500, 5000],
+        "position": [8, 12, 9],
+        "targetPosition": [3, 5, 4]
+    })
+    st.experimental_rerun()
 
 # File upload
 st.header("Upload Keywords")
@@ -39,7 +119,11 @@ st.markdown("Upload a CSV or Excel file with keywords, search volumes, and curre
 
 col1, col2 = st.columns([2, 1])
 with col1:
-    uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "xls"])
+    uploaded_file = st.file_uploader(
+        "Choose a file",
+        type=["csv", "xlsx", "xls"],
+        help="Upload a CSV or Excel file containing your keyword data."
+    )
 with col2:
     st.markdown("#### Supported Formats")
     st.markdown("- CSV files (.csv)")
@@ -106,17 +190,32 @@ if uploaded_file is not None:
 # Display and edit keywords
 st.header("Keywords")
 
-# Add new keyword form
+# Add new keyword form with tooltips
 with st.expander("Add New Keyword"):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        new_keyword = st.text_input("Keyword")
+        new_keyword = st.text_input(
+            "Keyword",
+            help="Enter the keyword or search term (e.g., 'gas bbq')."
+        )
     with col2:
-        new_volume = st.number_input("Search Volume", 0, 1000000, 1000)
+        new_volume = st.number_input(
+            "Search Volume",
+            0, 1000000, 1000,
+            help="The average monthly search volume for the keyword (e.g., 8000 searches per month)."
+        )
     with col3:
-        new_position = st.number_input("Current Position", 1, 100, 10)
+        new_position = st.number_input(
+            "Current Position",
+            1, 100, 10,
+            help="The current ranking position in search results (1-100, where 1 is the top position)."
+        )
     with col4:
-        new_target = st.number_input("Target Position", 1, 100, 5)
+        new_target = st.number_input(
+            "Target Position",
+            1, 100, 5,
+            help="The desired ranking position to achieve (1-100, typically better than the current position)."
+        )
         
     if st.button("Add Keyword"):
         if new_keyword:
@@ -129,39 +228,149 @@ with st.expander("Add New Keyword"):
             st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
             st.success("Keyword added!")
 
-# Display editable table
+# Display editable table with responsive design
+st.markdown("""
+    <style>
+        @media (max-width: 640px) {
+            .stDataFrame {
+                font-size: 12px;
+            }
+            .stDataFrame th, .stDataFrame td {
+                padding: 4px !important;
+            }
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 edited_df = st.data_editor(
     st.session_state.keywords,
     num_rows="dynamic",
     hide_index=True,
     column_config={
-        "keyword": st.column_config.TextColumn("Keyword"),
-        "searchVolume": st.column_config.NumberColumn("Search Volume", min_value=0, format="%d"),
-        "position": st.column_config.NumberColumn("Current Position", min_value=1, max_value=100, step=1),
-        "targetPosition": st.column_config.NumberColumn("Target Position", min_value=1, max_value=100, step=1)
-    }
+        "keyword": st.column_config.TextColumn(
+            "Keyword",
+            help="The keyword or search term."
+        ),
+        "searchVolume": st.column_config.NumberColumn(
+            "Search Volume",
+            min_value=0,
+            format="%d",
+            help="The average monthly search volume for the keyword."
+        ),
+        "position": st.column_config.NumberColumn(
+            "Current Position",
+            min_value=1,
+            max_value=100,
+            step=1,
+            help="The current ranking position in search results (1-100)."
+        ),
+        "targetPosition": st.column_config.NumberColumn(
+            "Target Position",
+            min_value=1,
+            max_value=100,
+            step=1,
+            help="The desired ranking position to achieve (1-100)."
+        )
+    },
+    use_container_width=True
 )
 st.session_state.keywords = edited_df
+
+# What-If Analysis Tool
+st.header("What-If Analysis")
+st.markdown("Analyze how changes in conversion rate impact your forecast.")
+
+with st.expander("Adjust Conversion Rate"):
+    col1, col2 = st.columns(2)
+    with col1:
+        min_conversion = st.number_input(
+            "Minimum Conversion Rate (%)",
+            0.1, 10.0, conversion_rate - 1.0, 0.1,
+            help="The lower bound for the conversion rate range to analyze."
+        )
+    with col2:
+        max_conversion = st.number_input(
+            "Maximum Conversion Rate (%)",
+            0.1, 10.0, conversion_rate + 1.0, 0.1,
+            help="The upper bound for the conversion rate range to analyze."
+        )
+
+    if st.button("Run What-If Analysis"):
+        if min_conversion >= max_conversion:
+            st.error("Minimum conversion rate must be less than maximum conversion rate.")
+        else:
+            # Generate range of conversion rates
+            steps = 5
+            conversion_range = np.linspace(min_conversion, max_conversion, steps)
+            what_if_data = []
+
+            for cr in conversion_range:
+                keywords = st.session_state.keywords.copy()
+                current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, ctr_model)) * keywords['searchVolume']
+                target_traffic = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, ctr_model)) * keywords['searchVolume']
+                traffic_gain = target_traffic - current_traffic
+                conversion_gain = traffic_gain * (cr / 100)
+                revenue_gain = conversion_gain * aov
+
+                what_if_data.append({
+                    "Conversion Rate (%)": cr,
+                    "Traffic Gain": int(traffic_gain.sum()),
+                    "Conversion Gain": round(conversion_gain.sum(), 1),
+                    "Revenue Gain": f"{currency_symbol}{int(revenue_gain.sum()):,}"
+                })
+
+            what_if_df = pd.DataFrame(what_if_data)
+            st.dataframe(
+                what_if_df,
+                hide_index=True,
+                column_config={
+                    "Conversion Rate (%)": st.column_config.NumberColumn("Conversion Rate (%)", format="%.1f"),
+                    "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
+                    "Conversion Gain": st.column_config.NumberColumn("Conversions", format="%.1f"),
+                    "Revenue Gain": "Revenue Gain"
+                },
+                use_container_width=True
+            )
+
+            # Plot the what-if analysis
+            fig = px.line(
+                what_if_df,
+                x="Conversion Rate (%)",
+                y=["Traffic Gain", "Conversion Gain"],
+                title="Impact of Conversion Rate on Forecast",
+                labels={"value": "Metric Value", "variable": "Metric"},
+                template="plotly_white"
+            )
+            fig.update_traces(mode="lines+markers")
+            fig.update_layout(
+                yaxis_title="Traffic / Conversions",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 # Calculate button
 calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
 
+# CTR calculation function with support for different models
+def get_ctr(position, model_name):
+    ctr_table = ctr_models[model_name]
+    position = int(position)
+    if position in ctr_table:
+        return ctr_table[position]
+    # Interpolate or use the closest higher position
+    for i in range(position, 0, -1):
+        if i in ctr_table:
+            return ctr_table[i]
+    for i in range(position, 100):
+        if i in ctr_table:
+            return ctr_table[i]
+    return 0.005  # Default for positions beyond 20
+
 if calculate_button:
-    # CTR calculation function
-    def get_ctr(position):
-        if position == 1: return 0.25
-        elif position == 2: return 0.15
-        elif position == 3: return 0.10
-        elif position <= 5: return 0.07
-        elif position <= 10: return 0.03
-        elif position <= 20: return 0.01
-        else: return 0.005
-    
-    # Calculate metrics
     if len(st.session_state.keywords) > 0:
         keywords = st.session_state.keywords.copy()
-        keywords['currentCTR'] = keywords['position'].apply(get_ctr)
-        keywords['targetCTR'] = keywords['targetPosition'].apply(get_ctr)
+        keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, ctr_model))
+        keywords['targetCTR'] = keywords['targetPosition'].apply(lambda pos: get_ctr(pos, ctr_model))
         keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
         keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
         keywords['trafficGain'] = keywords['targetTraffic'] - keywords['currentTraffic']
@@ -290,7 +499,8 @@ if calculate_button:
                 "Revenue": "Revenue",
                 "ROI": "Monthly ROI",
                 "Cumulative": "Cumulative ROI"
-            }
+            },
+            use_container_width=True
         )
         
         # Create visualization with plotly
@@ -351,7 +561,8 @@ if calculate_button:
                 "Target Traffic": st.column_config.NumberColumn("Target Traffic", format="%d"),
                 "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
                 "Revenue Gain": "Revenue Gain"
-            }
+            },
+            use_container_width=True
         )
         
         # Download button for results
@@ -367,4 +578,4 @@ if calculate_button:
 
 # Footer
 st.markdown("---")
-st.markdown("Built with Streamlit • [GitHub Repo](https://github.com/yourusername/seo-forecasting-tool)")
+st.markdown("Built with Streamlit • [GitHub Repo](https://github.com/boopin/seo-ecom-forecaster)")
