@@ -471,10 +471,11 @@ if calculate_button:
                 visibility: visible;
                 opacity: 1;
             }
-            /* Ensure st.metric delta text wraps and doesn't get cut off */
-            .stMetricDelta {
-                white-space: normal !important;
-                word-wrap: break-word !important;
+            /* Style for CI text below metrics */
+            .ci-text {
+                font-size: 12px;
+                color: #666;
+                margin-top: -8px;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -492,27 +493,27 @@ if calculate_button:
                     <span class="tooltiptext">This range shows where we expect the true traffic gain to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
                 </div>
             """, unsafe_allow_html=True)
-            st.metric("", f"{int(total_traffic_gain):,}", 
-                      f"+{traffic_percent:.1f}% (95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,})")
+            st.metric("", f"{int(total_traffic_gain):,}", f"+{traffic_percent:.1f}%")
+            st.markdown(f'<div class="ci-text">95% CI: {int(traffic_ci_lower):,} - {int(traffic_ci_upper):,}</div>', unsafe_allow_html=True)
         with col2:
             st.markdown("""
                 <div class="tooltip">Total Conversion Gain
                     <span class="tooltiptext">This range shows where we expect the true number of conversions to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
                 </div>
             """, unsafe_allow_html=True)
-            st.metric("", f"{total_conversion_gain:,}", 
-                      f"+{conv_percent:.1f}% (95% CI: {conversion_ci_lower:,} - {conversion_ci_upper:,})")
+            st.metric("", f"{total_conversion_gain:,}", f"+{conv_percent:.1f}%")
+            st.markdown(f'<div class="ci-text">95% CI: {conversion_ci_lower:,} - {conversion_ci_upper:,}</div>', unsafe_allow_html=True)
         with col3:
             st.markdown("""
                 <div class="tooltip">Total Revenue Gain
                     <span class="tooltiptext">This range shows where we expect the true revenue gain to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
                 </div>
             """, unsafe_allow_html=True)
+            st.metric("", f"{currency_symbol}{int(total_revenue_gain):,}", f"+{revenue_percent:.1f}%")
             # Format CI with shorter numbers (e.g., use K for thousands)
             revenue_ci_lower_display = f"{int(revenue_ci_lower/1000)}K" if revenue_ci_lower >= 10000 else f"{int(revenue_ci_lower)}"
             revenue_ci_upper_display = f"{int(revenue_ci_upper/1000)}K" if revenue_ci_upper >= 10000 else f"{int(revenue_ci_upper)}"
-            st.metric("", f"{currency_symbol}{int(total_revenue_gain):,}", 
-                      f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{revenue_ci_lower_display} - {currency_symbol}{revenue_ci_upper_display})")
+            st.markdown(f'<div class="ci-text">95% CI: {currency_symbol}{revenue_ci_lower_display} - {currency_symbol}{revenue_ci_upper_display}</div>', unsafe_allow_html=True)
         with col4:
             st.markdown("Cost Per Acquisition (CPA)")
             st.metric("", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
