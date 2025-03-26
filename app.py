@@ -8,4 +8,5 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# The pages (Home.py and Readme_FAQ.py) will be automatically detected by Streamlit
+# Redirect to the Home page
+st.switch_page("pages/Home.py")
