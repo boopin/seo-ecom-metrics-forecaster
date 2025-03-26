@@ -124,7 +124,7 @@ if st.sidebar.button("Reset to Defaults"):
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
         "targetPosition": [3, 5, 4],
-        "competitorDifficulty": [5, 5, 5]  # Added default competitor difficulty
+        "keywordDifficulty": [5, 5, 5]  # Updated to keywordDifficulty
     })
     st.experimental_rerun()
 
@@ -148,14 +148,14 @@ with col2:
     st.markdown("- Search Volume")
     st.markdown("- Current Position (optional)")
 
-# Initialize data with competitor difficulty
+# Initialize data with keyword difficulty
 if 'keywords' not in st.session_state:
     st.session_state.keywords = pd.DataFrame({
         "keyword": ["gas bbq", "charcoal bbq", "bbq grill"],
         "searchVolume": [8000, 6500, 5000],
         "position": [8, 12, 9],
         "targetPosition": [3, 5, 4],
-        "competitorDifficulty": [5, 5, 5]  # Added default competitor difficulty
+        "keywordDifficulty": [5, 5, 5]  # Updated to keywordDifficulty
     })
 
 # Process uploaded file
@@ -170,7 +170,7 @@ if uploaded_file is not None:
         keyword_cols = ["keyword", "term", "query", "search term"]
         volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
         position_cols = ["position", "rank", "ranking", "pos", "serp"]
-        difficulty_cols = ["difficulty", "competitor difficulty", "comp difficulty", "seo difficulty"]
+        difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]  # Updated to keyword difficulty
         
         # Find the right columns (case insensitive)
         df.columns = df.columns.str.lower()
@@ -200,11 +200,11 @@ if uploaded_file is not None:
         # Calculate target position - improve by 50% but not below 1
         new_df['targetPosition'] = new_df['position'].apply(lambda x: max(1, int(x * 0.5)))
         
-        # Add competitor difficulty (default to 5 if not in file)
+        # Add keyword difficulty (default to 5 if not in file)
         if difficulty_col:
-            new_df['competitorDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
+            new_df['keywordDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
         else:
-            new_df['competitorDifficulty'] = 5
+            new_df['keywordDifficulty'] = 5
         
         st.session_state.keywords = new_df
         st.success(f"Successfully imported {len(new_df)} keywords!")
@@ -243,7 +243,7 @@ with st.expander("Add New Keyword"):
         )
     with col5:
         new_difficulty = st.number_input(
-            "Competitor Difficulty",
+            "Keyword Difficulty",
             1, 10, 5,
             help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
         )
@@ -255,7 +255,7 @@ with st.expander("Add New Keyword"):
                 "searchVolume": [new_volume],
                 "position": [new_position],
                 "targetPosition": [new_target],
-                "competitorDifficulty": [new_difficulty]
+                "keywordDifficulty": [new_difficulty]
             })
             st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
             st.success("Keyword added!")
@@ -303,8 +303,8 @@ edited_df = st.data_editor(
             step=1,
             help="The desired ranking position to achieve (1-100)."
         ),
-        "competitorDifficulty": st.column_config.NumberColumn(
-            "Competitor Difficulty",
+        "keywordDifficulty": st.column_config.NumberColumn(
+            "Keyword Difficulty",
             min_value=1,
             max_value=10,
             step=1,
@@ -348,9 +348,9 @@ with st.expander("Adjust Conversion Rate"):
 
             for cr in conversion_range:
                 keywords = st.session_state.keywords.copy()
-                # Adjust target position based on competitor difficulty
+                # Adjust target position based on keyword difficulty
                 keywords['adjustedTargetPosition'] = keywords.apply(
-                    lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['competitorDifficulty'] / 10))), axis=1
+                    lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
                 )
                 current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
                 target_traffic = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
@@ -403,9 +403,9 @@ if calculate_button:
         # Get the CTR table for the selected model
         selected_ctr_table = ctr_models[ctr_model]
         keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
-        # Adjust target position based on competitor difficulty
+        # Adjust target position based on keyword difficulty
         keywords['adjustedTargetPosition'] = keywords.apply(
-            lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['competitorDifficulty'] / 10))), axis=1
+            lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
         )
         keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
         keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
@@ -457,10 +457,14 @@ if calculate_button:
             st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
                       f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
         
-        # Generate monthly projections
-        st.header(f"Monthly Projections ({projection_months} Months)")
-        
-        # Define seasonality factors
+        # Break-Even Analysis (Moved and Enhanced)
+        st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
+        # Calculate monthly projections for break-even analysis
+        monthly_data_temp = []
+        cumulative_traffic = 0
+        cumulative_conversions = 0
+        cumulative_revenue = 0
+        current_month = pd.Timestamp.now().month - 1
         seasonality = {
             "BBQ & Outdoor Cooking": [0.4, 0.5, 0.7, 1.0, 1.5, 2.0, 2.0, 1.5, 1.0, 0.7, 0.7, 0.6],
             "Christmas & Seasonal": [0.2, 0.2, 0.2, 0.2, 0.3, 0.3, 0.4, 0.6, 1.0, 1.5, 2.0, 2.5],
@@ -470,15 +474,58 @@ if calculate_button:
             "Furniture & Home": [1.2, 1.0, 1.1, 1.2, 1.3, 1.3, 1.2, 1.2, 1.3, 1.2, 1.2, 0.9]
         }
         
-        # Get current month index (0-11)
-        current_month = pd.Timestamp.now().month - 1
+        for i in range(projection_months):
+            month_idx = (current_month + i) % 12
+            month_name = pd.Timestamp(year=2023, month=month_idx+1, day=1).strftime('%b')
+            progress = i / (projection_months - 1) if projection_months > 1 else 1
+            growth_factor = 1 / (1 + np.exp(-10 * (progress - 0.5)))
+            season_factor = seasonality[category][month_idx]
+            month_factor = growth_factor * season_factor
+            traffic_gain = total_traffic_gain * month_factor / sum([1 / (1 + np.exp(-10 * (j / (projection_months - 1) - 0.5))) * 
+                                                                 seasonality[category][(current_month + j) % 12] 
+                                                                 for j in range(projection_months)])
+            conversion_gain = traffic_gain * (conversion_rate / 100)
+            revenue_gain = conversion_gain * aov
+            cumulative_traffic += traffic_gain
+            cumulative_conversions += conversion_gain
+            cumulative_revenue += revenue_gain
+            monthly_data_temp.append({
+                "Month": month_name,
+                "Cumulative Revenue": cumulative_revenue
+            })
         
-        # Total metrics to distribute
-        total_traffic_gain = keywords['trafficGain'].sum()
-        total_conversion_gain = keywords['conversionGain'].sum()
-        total_revenue_gain = keywords['revenueGain'].sum()
+        break_even_month = None
+        for i, row in enumerate(monthly_data_temp):
+            if row['Cumulative Revenue'] >= implementation_cost and break_even_month is None:
+                break_even_month = i + 1
+                break
         
-        # Create monthly projections
+        # Display Break-Even Analysis in a styled container
+        if break_even_month:
+            st.markdown(
+                f"""
+                <div style='background-color: #e6f3ff; padding: 20px; border-radius: 10px; border: 2px solid #2563eb; margin: 20px 0;'>
+                    <h3 style='color: #2563eb; margin-top: 0;'>🎯 Break-Even Point Reached</h3>
+                    <p style='font-size: 18px; margin: 0;'>Achieved in <b>month {break_even_month}</b> with a cumulative revenue of <b>{currency_symbol}{int(monthly_data_temp[break_even_month-1]['Cumulative Revenue']):,}</b>.</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                f"""
+                <div style='background-color: #ffe6e6; padding: 20px; border-radius: 10px; border: 2px solid #ff4d4d; margin: 20px 0;'>
+                    <h3 style='color: #ff4d4d; margin-top: 0;'>⚠️ Break-Even Point Not Reached</h3>
+                    <p style='font-size: 18px; margin: 0;'>Not achieved within {projection_months} months. Final cumulative revenue: <b>{currency_symbol}{int(cumulative_revenue):,}</b>.</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        
+        # Generate monthly projections
+        st.header(f"Monthly Projections ({projection_months} Months)")
+        
+        # Define seasonality factors (already defined above, reusing for clarity)
         monthly_data = []
         cumulative_traffic = 0
         cumulative_conversions = 0
@@ -527,7 +574,7 @@ if calculate_button:
                 "Cumulative ROI": cumulative_roi,
                 "ROI": f"{roi:.1f}%",
                 "Cumulative": f"{cumulative_roi:.1f}%",
-                "Cumulative Revenue": cumulative_revenue  # Added for break-even analysis
+                "Cumulative Revenue": cumulative_revenue
             })
         
         # Add total row
@@ -564,19 +611,6 @@ if calculate_button:
             },
             use_container_width=True
         )
-        
-        # Break-Even Analysis
-        st.subheader("Break-Even Analysis")
-        break_even_month = None
-        for i, row in enumerate(monthly_data[:-1]):  # Exclude the total row
-            if row['Cumulative Revenue'] >= implementation_cost and break_even_month is None:
-                break_even_month = i + 1
-                break
-        
-        if break_even_month:
-            st.write(f"Break-even point reached in month {break_even_month} with a cumulative revenue of {currency_symbol}{int(monthly_data[break_even_month-1]['Cumulative Revenue']):,}")
-        else:
-            st.write(f"Break-even point not reached within {projection_months} months. Final cumulative revenue: {currency_symbol}{int(cumulative_revenue):,}")
         
         # Create visualization with plotly
         st.subheader("Monthly Projection Chart")
@@ -625,14 +659,14 @@ if calculate_button:
         keyword_display['Revenue Gain'] = currency_symbol + keyword_display['revenueGain'].round(0).astype(int).astype(str)
         
         st.dataframe(
-            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'competitorDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']],
+            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']],
             hide_index=True,
             column_config={
                 "keyword": "Keyword",
                 "searchVolume": st.column_config.NumberColumn("Search Volume", format="%d"),
                 "position": "Current Position",
                 "targetPosition": "Target Position",
-                "competitorDifficulty": "Competitor Difficulty",
+                "keywordDifficulty": "Keyword Difficulty",
                 "adjustedTargetPosition": "Adjusted Target Position",
                 "Current Traffic": st.column_config.NumberColumn("Current Traffic", format="%d"),
                 "Target Traffic": st.column_config.NumberColumn("Target Traffic", format="%d"),
@@ -643,7 +677,7 @@ if calculate_button:
         )
         
         # Download button for results
-        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'competitorDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']].to_csv(index=False).encode('utf-8')
+        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Download Results as CSV",
             data=csv,
