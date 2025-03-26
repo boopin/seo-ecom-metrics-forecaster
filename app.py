@@ -471,6 +471,11 @@ if calculate_button:
                 visibility: visible;
                 opacity: 1;
             }
+            /* Ensure st.metric delta text wraps and doesn't get cut off */
+            .stMetricDelta {
+                white-space: normal !important;
+                word-wrap: break-word !important;
+            }
             </style>
         """, unsafe_allow_html=True)
         
@@ -503,8 +508,11 @@ if calculate_button:
                     <span class="tooltiptext">This range shows where we expect the true revenue gain to fall, with 95% confidence, based on the uncertainty in click-through rates.</span>
                 </div>
             """, unsafe_allow_html=True)
+            # Format CI with shorter numbers (e.g., use K for thousands)
+            revenue_ci_lower_display = f"{int(revenue_ci_lower/1000)}K" if revenue_ci_lower >= 10000 else f"{int(revenue_ci_lower)}"
+            revenue_ci_upper_display = f"{int(revenue_ci_upper/1000)}K" if revenue_ci_upper >= 10000 else f"{int(revenue_ci_upper)}"
             st.metric("", f"{currency_symbol}{int(total_revenue_gain):,}", 
-                      f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
+                      f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{revenue_ci_lower_display} - {currency_symbol}{revenue_ci_upper_display})")
         with col4:
             st.markdown("Cost Per Acquisition (CPA)")
             st.metric("", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
@@ -710,10 +718,25 @@ if calculate_button:
         keyword_display['Current Traffic'] = keyword_display['currentTraffic'].round(0).astype(int)
         keyword_display['Target Traffic'] = keyword_display['targetTraffic'].round(0).astype(int)
         keyword_display['Traffic Gain'] = keyword_display['trafficGain'].round(0).astype(int)
-        keyword_display['Revenue Gain'] = currency_symbol + keyword_display['revenueGain'].round(0).astype(int).astype(str)
+        keyword_display['Revenue Gain'] = keyword_display['revenueGain'].round(0).astype(int)
+        
+        # Calculate percentage changes for Traffic Gain and Revenue Gain
+        keyword_display['Traffic Gain %'] = keyword_display.apply(
+            lambda row: 0 if row['currentTraffic'] == 0 else (row['trafficGain'] / row['currentTraffic'] * 100), axis=1
+        )
+        keyword_display['Revenue Gain %'] = keyword_display.apply(
+            lambda row: 0 if row['currentTraffic'] == 0 else (row['revenueGain'] / (row['currentTraffic'] * conversion_rate / 100 * aov) * 100) 
+            if (row['currentTraffic'] * conversion_rate / 100 * aov) != 0 else 0, axis=1
+        )
+        
+        # Format Revenue Gain with currency symbol and percentage changes
+        keyword_display['Revenue Gain'] = currency_symbol + keyword_display['Revenue Gain'].astype(str)
+        keyword_display['Traffic Gain %'] = keyword_display['Traffic Gain %'].apply(lambda x: f"{x:.1f}%")
+        keyword_display['Revenue Gain %'] = keyword_display['Revenue Gain %'].apply(lambda x: f"{x:.1f}%")
         
         st.dataframe(
-            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']],
+            keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 
+                             'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Traffic Gain %', 'Revenue Gain', 'Revenue Gain %']],
             hide_index=True,
             column_config={
                 "keyword": "Keyword",
@@ -725,13 +748,16 @@ if calculate_button:
                 "Current Traffic": st.column_config.NumberColumn("Current Traffic", format="%d"),
                 "Target Traffic": st.column_config.NumberColumn("Target Traffic", format="%d"),
                 "Traffic Gain": st.column_config.NumberColumn("Traffic Gain", format="%d"),
-                "Revenue Gain": "Revenue Gain"
+                "Traffic Gain %": "Traffic Gain %",
+                "Revenue Gain": "Revenue Gain",
+                "Revenue Gain %": "Revenue Gain %"
             },
             use_container_width=True
         )
         
         # Download button for results
-        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Revenue Gain']].to_csv(index=False).encode('utf-8')
+        csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 
+                               'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Traffic Gain %', 'Revenue Gain', 'Revenue Gain %']].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Download Results as CSV",
             data=csv,
