@@ -460,7 +460,7 @@ if calculate_button:
             st.metric("Total Revenue Gain", f"{currency_symbol}{int(total_revenue_gain):,}", 
                       f"+{revenue_percent:.1f}% (95% CI: {currency_symbol}{int(revenue_ci_lower):,} - {currency_symbol}{int(revenue_ci_upper):,})")
         with col4:
-            st.metric("Cost Per Acquisition (CPA)", Ascending", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
+            st.metric("Cost Per Acquisition (CPA)", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
         
         # Break-Even Analysis
         st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
