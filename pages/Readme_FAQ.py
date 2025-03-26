@@ -80,6 +80,54 @@ Follow these steps to get started with EcomSEO Predictor:
 **Tip**: If you need to start over, click "Reset to Defaults" in the sidebar to restore the default settings and keywords.
 """)
 
+# How to Start Using This Tool (For Non-Tech Users)
+st.header("How to Start Using This Tool (For Non-Tech Users)")
+st.markdown("""
+If you're new to tools like this or not familiar with SEO, don’t worry! We’ll guide you through the basics to get started with EcomSEO Predictor. Follow these simple steps to see how improving your website’s search rankings can help your online store.
+
+1. **Open the Tool**:
+   - You’re already on the right page! Look at the sidebar on the left side of the screen. Click on **"Home"** to go to the main tool. It will say "EcomSEO Predictor - Main App" at the top.
+
+2. **Tell the Tool About Your Business**:
+   - On the left sidebar, you’ll see a section called **"Settings"**. These are the basic details the tool needs to make predictions for your store:
+     - **Product Category**: Choose the type of products you sell (e.g., "Fashion & Apparel" if you sell clothes, or "BBQ & Outdoor Cooking" if you sell grills).
+     - **Currency**: Pick the currency you use for your store (e.g., "USD ($)" for US dollars).
+     - **Average Order Value**: Enter the average amount a customer spends when they buy from you. For example, if a typical order is $50, type "50".
+     - **Implementation Cost**: This is how much you plan to spend on improving your website’s search rankings (e.g., hiring someone to help with SEO). If you’re not sure, you can leave it at $5000 for now.
+   - Don’t worry about the other settings for now—they’re already set to good defaults!
+
+3. **Add Your Keywords**:
+   - Keywords are the words people type into Google to find your products, like "buy summer dress" or "best BBQ grill".
+   - Scroll down to the section called **"Keywords"**. You’ll see a table with some example keywords like "gas bbq".
+   - To add your own keywords:
+     - Click on the box that says **"Add New Keyword"** to open it.
+     - Fill in the details:
+       - **Keyword**: Type the search term (e.g., "summer dress").
+       - **Search Volume**: This is how many people search for this term each month. If you don’t know, you can guess for now (e.g., 1000).
+       - **Current Position**: Where your website shows up in Google for this term (e.g., if you’re on the second page, it might be 15). If you’re not sure, leave it at 10.
+       - **Target Position**: Where you’d like to show up (e.g., 3 to be near the top of the first page).
+       - **Keyword Difficulty**: How hard it is to rank for this term (1 is easy, 10 is hard). If you’re not sure, leave it at 5.
+     - Click the **"Add Keyword"** button to add it to the table.
+   - You can add as many keywords as you like!
+
+4. **Run Your Prediction**:
+   - Once you’ve added at least one keyword, scroll down and find the big blue button that says **"Calculate Forecast"**.
+   - Click this button, and the tool will show you how much extra traffic, sales, and revenue you might get by improving your search rankings.
+
+5. **Look at Your Results**:
+   - After clicking "Calculate Forecast", you’ll see a few sections:
+     - **Forecast Results**: This shows the total extra visitors, sales, and money you might make.
+     - **Break-Even Analysis**: This tells you how long it will take to make back the money you spend on SEO.
+     - **Keyword Details**: This shows how each keyword you added will help your store.
+   - Don’t worry if some numbers look complicated—the main ones to look at are the "Total Traffic Gain" (more visitors), "Total Conversion Gain" (more sales), and "Total Revenue Gain" (more money).
+
+6. **What’s Next?**:
+   - If you like the results, you can start working on your SEO to improve your rankings for those keywords.
+   - If you’re not sure what to do next, you can reach out to an SEO expert for help. You can also download your results by clicking **"Download Results as CSV"** at the bottom of the "Keyword Details" section to share with someone who can help.
+
+**You Did It!** 🎉 You’ve just used EcomSEO Predictor to see how SEO can grow your online store. If you get stuck or have questions, check out the "Additional Resources" section below for ways to get help.
+""")
+
 # Additional Resources
 st.header("Additional Resources")
 st.markdown("""
