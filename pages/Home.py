@@ -9,7 +9,7 @@ from io import StringIO
 # Set page configuration for browser tab title and favicon
 st.set_page_config(
     page_title="EcomSEO Predictor",
-    page_icon="📈",  # Replace with a URL to a favicon image if available
+    page_icon="📈",
     layout="wide"
 )
 
@@ -24,7 +24,6 @@ st.markdown("""
         <meta property="og:description" content="Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.">
         <meta property="og:type" content="website">
         <meta property="og:url" content="https://seo-ecom-metrics-forecaster.streamlit.app/Home">
-        <!-- Replace the image URL below with a relevant image for your app -->
         <meta property="og:image" content="https://i.postimg.cc/8PqLq0zN/seo-forecasting.jpg">
     </head>
 """, unsafe_allow_html=True)
@@ -32,36 +31,30 @@ st.markdown("""
 # Global CSS for consistent styling
 st.markdown("""
     <style>
-        /* Define color variables */
         :root {
             --primary: #2563eb;
             --secondary: #10b981;
-            --neutral: #374151; /* Darker gray for better contrast */
+            --neutral: #374151;
             --background: #f9fafb;
             --error: #ef4444;
         }
-        /* Apply colors to headers */
         h1, h2, h3, h4, h5, h6 {
             color: var(--primary);
         }
-        /* Style for success messages */
         .stSuccess {
             background-color: var(--secondary) !important;
             color: white !important;
         }
-        /* Style for error messages */
         .stError {
             background-color: var(--error) !important;
             color: white !important;
         }
-        /* Style for containers */
         .stContainer {
             background-color: var(--background);
             padding: 20px;
             border-radius: 8px;
             border: 1px solid #e5e7eb;
         }
-        /* Style for buttons */
         .stButton > button {
             background-color: var(--primary);
             color: white;
@@ -70,9 +63,8 @@ st.markdown("""
             padding: 10px 20px;
         }
         .stButton > button:hover {
-            background-color: #1d4ed8; /* Darker shade of primary */
+            background-color: #1d4ed8;
         }
-        /* Style for secondary buttons (e.g., Reset to Defaults) */
         .stButton > button[kind="secondary"] {
             background-color: #6b7280;
             color: white;
@@ -80,7 +72,6 @@ st.markdown("""
         .stButton > button[kind="secondary"]:hover {
             background-color: #4b5563;
         }
-        /* Custom Tooltip Styles */
         .tooltip {
             position: relative;
             display: inline-block;
@@ -96,9 +87,9 @@ st.markdown("""
             padding: 8px;
             position: absolute;
             z-index: 1;
-            bottom: 125%; /* Position above the icon */
+            bottom: 125%;
             left: 50%;
-            margin-left: -110px; /* Center the tooltip */
+            margin-left: -110px;
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -106,21 +97,18 @@ st.markdown("""
             visibility: visible;
             opacity: 1;
         }
-        /* Show tooltip when active (for click support) */
         .tooltip.active .tooltiptext {
             visibility: visible;
             opacity: 1;
         }
     </style>
     <script>
-        // JavaScript to toggle tooltip on click
         document.addEventListener('DOMContentLoaded', function() {
             const tooltips = document.querySelectorAll('.tooltip');
             tooltips.forEach(tooltip => {
                 tooltip.addEventListener('click', function() {
                     this.classList.toggle('active');
                 });
-                // Close tooltip when clicking outside
                 document.addEventListener('click', function(e) {
                     if (!tooltip.contains(e.target)) {
                         tooltip.classList.remove('active');
@@ -239,7 +227,11 @@ default_settings = {
     "currency_selection": "USD ($)",
     "aov": 250,
     "implementation_cost": 5000,
-    "ctr_model": "Default"
+    "ctr_model": "Default",
+    "featured_snippet_present": False,
+    "in_featured_snippet": False,
+    "faq_present": False,
+    "in_faq": False
 }
 
 # Initialize session state for settings if not already present
@@ -256,26 +248,65 @@ if 'keywords' not in st.session_state:
         "keywordDifficulty": [5, 5, 5]
     })
 
+# Initialize session state for custom CTR values
+if 'custom_ctr' not in st.session_state:
+    st.session_state.custom_ctr = {pos: 0.0 for pos in range(1, 11)}  # Positions 1-10
+    st.session_state.custom_ctr['beyond_10'] = 0.005  # Default for positions > 10
+
 # Define CTR models
 ctr_models = {
     "Default": {1: 0.25, 2: 0.15, 3: 0.10, 4: 0.07, 5: 0.07, 6: 0.03, 7: 0.03, 8: 0.03, 9: 0.03, 10: 0.03, 11: 0.01, 20: 0.01, 21: 0.005},
     "E-commerce": {1: 0.30, 2: 0.20, 3: 0.12, 4: 0.08, 5: 0.06, 6: 0.04, 7: 0.03, 8: 0.02, 9: 0.02, 10: 0.01, 11: 0.008, 20: 0.005, 21: 0.002},
-    "Informational": {1: 0.35, 2: 0.25, 3: 0.15, 4: 0.10, 5: 0.08, 6: 0.05, 7: 0.04, 8: 0.03, 9: 0.02, 10: 0.01, 11: 0.005, 20: 0.003, 21: 0.001}
+    "Informational": {1: 0.35, 2: 0.25, 3: 0.15, 4: 0.10, 5: 0.08, 6: 0.05, 7: 0.04, 8: 0.03, 9: 0.02, 10: 0.01, 11: 0.005, 20: 0.003, 21: 0.001},
+    "Custom": {}  # Placeholder; will be populated by user input
 }
 
-# CTR calculation function with support for different models
-def get_ctr(position, ctr_table):
+# CTR calculation function with support for SERP features and custom CTR
+def get_ctr(position, ctr_table, featured_snippet_present=False, in_featured_snippet=False, faq_present=False, in_faq=False):
     position = int(position)
-    if position in ctr_table:
-        return ctr_table[position]
-    # Interpolate or use the closest higher position
-    for i in range(position, 0, -1):
-        if i in ctr_table:
-            return ctr_table[i]
-    for i in range(position, 100):
-        if i in ctr_table:
-            return ctr_table[i]
-    return 0.005  # Default for positions beyond 20
+    
+    # If Custom model is selected, use the user-defined CTR values
+    if not ctr_table:  # Empty dict indicates Custom model
+        if position in st.session_state.custom_ctr:
+            ctr = st.session_state.custom_ctr[position]
+        else:
+            ctr = st.session_state.custom_ctr['beyond_10']
+    else:
+        # Use predefined model
+        if position in ctr_table:
+            ctr = ctr_table[position]
+        else:
+            # Interpolate or use the closest higher position
+            for i in range(position, 0, -1):
+                if i in ctr_table:
+                    ctr = ctr_table[i]
+                    break
+            else:
+                for i in range(position, 100):
+                    if i in ctr_table:
+                        ctr = ctr_table[i]
+                        break
+                else:
+                    ctr = 0.005  # Default for positions beyond 20
+
+    # Apply SERP feature modifiers (only for predefined models, not Custom)
+    if ctr_table:
+        if featured_snippet_present:
+            if position == 1:
+                if in_featured_snippet:
+                    ctr *= 1.1  # 10% increase if in featured snippet
+                else:
+                    ctr *= 0.8  # 20% decrease if not in featured snippet
+            elif 2 <= position <= 5:
+                ctr *= 0.9  # 10% decrease for positions 2-5
+        if faq_present:
+            if position == 1:
+                if in_faq:
+                    ctr *= 1.1  # 10% increase if in FAQ
+                else:
+                    ctr *= 0.9  # 10% decrease if not in FAQ
+
+    return max(0.001, ctr)  # Ensure CTR is at least 0.1% to avoid zero traffic
 
 # Settings with tooltips
 category = st.sidebar.selectbox(
@@ -319,15 +350,69 @@ st.markdown("""
         <span>CTR Model</span>
         <div class='tooltip'>
             <span style='color: #2563eb;'>ℹ️</span>
-            <span class='tooltiptext'>Click-Through Rate (CTR) model determines how likely users are to click on your site based on its search position. Choose a model that matches your industry.</span>
+            <span class='tooltiptext'>Click-Through Rate (CTR) model determines how likely users are to click on your site based on its search position. Choose a model that matches your industry, or select Custom to define your own CTR values.</span>
         </div>
     </div>
 """, unsafe_allow_html=True)
 ctr_model = st.sidebar.selectbox(
     "",
     list(ctr_models.keys()),
-    help="Select the Click-Through Rate (CTR) model based on your industry. E-commerce sites typically have higher CTRs for top positions, while informational sites have higher CTRs overall but drop off faster."
+    help="Select the Click-Through Rate (CTR) model based on your industry. E-commerce sites typically have higher CTRs for top positions, while informational sites have higher CTRs overall but drop off faster. Choose Custom to input your own CTR values."
 )
+
+# Custom CTR input form
+if ctr_model == "Custom":
+    st.sidebar.markdown("### Custom CTR Values (%)")
+    st.sidebar.markdown("Enter the CTR for each position (1-10). Values should be percentages (e.g., 30 for 30%).")
+    cols = st.sidebar.columns(5)
+    for i in range(1, 11):
+        with cols[(i-1) % 5]:
+            st.session_state.custom_ctr[i] = st.number_input(
+                f"Pos {i}",
+                min_value=0.0,
+                max_value=100.0,
+                value=st.session_state.custom_ctr[i] if st.session_state.custom_ctr[i] != 0.0 else float(ctr_models["Default"][i] * 100),
+                step=0.1,
+                format="%.1f",
+                key=f"custom_ctr_{i}"
+            ) / 100.0  # Convert percentage to decimal
+    st.session_state.custom_ctr['beyond_10'] = st.sidebar.number_input(
+        "Positions > 10",
+        min_value=0.0,
+        max_value=100.0,
+        value=st.session_state.custom_ctr['beyond_10'] * 100 if st.session_state.custom_ctr['beyond_10'] != 0.005 else 0.5,
+        step=0.1,
+        format="%.1f",
+        help="CTR for positions beyond 10 (e.g., 0.5 for 0.5%)."
+    ) / 100.0
+
+# SERP Features Adjustments
+st.sidebar.markdown("### SERP Features Adjustments")
+featured_snippet_present = st.sidebar.checkbox(
+    "Featured Snippet Present",
+    value=st.session_state.settings["featured_snippet_present"],
+    help="Check if a featured snippet appears in the SERP for your keywords."
+)
+in_featured_snippet = False
+if featured_snippet_present:
+    in_featured_snippet = st.sidebar.checkbox(
+        "My site is in the Featured Snippet",
+        value=st.session_state.settings["in_featured_snippet"],
+        help="Check if your site is the one displayed in the featured snippet."
+    )
+
+faq_present = st.sidebar.checkbox(
+    "FAQ Present",
+    value=st.session_state.settings["faq_present"],
+    help="Check if an FAQ section appears in the SERP for your keywords."
+)
+in_faq = False
+if faq_present:
+    in_faq = st.sidebar.checkbox(
+        "My site is in the FAQ",
+        value=st.session_state.settings["in_faq"],
+        help="Check if your site is included in the FAQ section."
+    )
 
 # Update session state settings
 st.session_state.settings.update({
@@ -337,23 +422,26 @@ st.session_state.settings.update({
     "currency_selection": currency_selection,
     "aov": aov,
     "implementation_cost": implementation_cost,
-    "ctr_model": ctr_model
+    "ctr_model": ctr_model,
+    "featured_snippet_present": featured_snippet_present,
+    "in_featured_snippet": in_featured_snippet,
+    "faq_present": faq_present,
+    "in_faq": in_faq
 })
 
 # Reset to Defaults button
 if st.sidebar.button("Reset to Defaults", type="secondary"):
-    # Clear session state to ensure defaults are applied
     if 'settings' in st.session_state:
         del st.session_state.settings
     if 'keywords' in st.session_state:
         del st.session_state.keywords
-    # Rerun the app to apply the defaults
+    if 'custom_ctr' in st.session_state:
+        del st.session_state.custom_ctr
     st.rerun()
 
 # Step 1: Prepare Your Data
 with st.container():
     st.markdown("### Step 1: Prepare Your Data")
-    # File upload
     st.header("Upload Keywords")
     st.markdown("Upload a CSV or Excel file with keywords, search volumes, and current positions")
 
@@ -373,7 +461,6 @@ with st.container():
         st.markdown("- Search Volume")
         st.markdown("- Current Position (optional)")
 
-    # Process uploaded file
     if uploaded_file is not None:
         try:
             if uploaded_file.name.endswith('.csv'):
@@ -381,13 +468,11 @@ with st.container():
             else:
                 df = pd.read_excel(uploaded_file)
                 
-            # Try to map columns
             keyword_cols = ["keyword", "term", "query", "search term"]
             volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
             position_cols = ["position", "rank", "ranking", "pos", "serp"]
             difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]
             
-            # Find the right columns (case insensitive)
             df.columns = df.columns.str.lower()
             
             keyword_col = next((col for col in df.columns if any(kw in col for kw in keyword_cols)), df.columns[0])
@@ -398,7 +483,6 @@ with st.container():
             difficulty_col = next((col for col in df.columns if any(diff in col for diff in difficulty_cols)), 
                                   None)
             
-            # Create new dataframe
             new_df = pd.DataFrame()
             new_df['keyword'] = df[keyword_col]
             
@@ -412,10 +496,8 @@ with st.container():
             else:
                 new_df['position'] = 20
                 
-            # Calculate target position - improve by 50% but not below 1
             new_df['targetPosition'] = new_df['position'].apply(lambda x: max(1, int(x * 0.5)))
             
-            # Add keyword difficulty (default to 5 if not in file)
             if difficulty_col:
                 new_df['keywordDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
             else:
@@ -427,10 +509,8 @@ with st.container():
         except Exception as e:
             st.error(f"Error processing file: {e}")
 
-    # Display and edit keywords
     st.header("Keywords")
 
-    # Add new keyword form with tooltips
     with st.expander("Add New Keyword"):
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
@@ -460,10 +540,10 @@ with st.container():
             st.markdown("""
                 <div style='display: flex; align-items: center; gap: 5px;'>
                     <span>Keyword Difficulty</span>
-                    <span style='cursor: pointer; color: #2563eb;'
-                          title='A score from 1 to 10 indicating how hard it is to rank for this keyword. 1 = very easy, 10 = very hard.'>
-                        ℹ️
-                    </span>
+                    <div class='tooltip'>
+                        <span style='color: #2563eb;'>ℹ️</span>
+                        <span class='tooltiptext'>A score from 1 to 10 indicating how hard it is to rank for this keyword. 1 = very easy, 10 = very hard.</span>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             new_difficulty = st.number_input(
@@ -484,7 +564,6 @@ with st.container():
                 st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
                 st.success("Keyword added!")
 
-    # Display editable table with responsive design
     st.markdown("""
         <style>
             @media (max-width: 640px) {
@@ -539,16 +618,19 @@ with st.container():
     )
     st.session_state.keywords = edited_df
 
-    # Preview Forecast button
     if st.button("Preview Forecast", help="Get a quick estimate of your traffic gain based on current settings"):
         if len(st.session_state.keywords) > 0:
             keywords = st.session_state.keywords.copy()
             selected_ctr_table = ctr_models[ctr_model]
-            keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+            keywords['currentCTR'] = keywords['position'].apply(
+                lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+            )
             keywords['adjustedTargetPosition'] = keywords.apply(
                 lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
             )
-            keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+            keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(
+                lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+            )
             keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
             keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
             traffic_gain = (keywords['targetTraffic'] - keywords['currentTraffic']).sum()
@@ -556,7 +638,6 @@ with st.container():
         else:
             st.warning("Please add at least one keyword to preview the forecast.")
 
-    # Clear Keywords button
     if st.button("Clear Keywords", help="Remove all keywords and start fresh"):
         st.session_state.keywords = pd.DataFrame({
             "keyword": [],
@@ -593,7 +674,7 @@ calculate_button = st.button("Calculate Forecast 📊", type="primary", use_cont
                             help="Generate your SEO forecast based on the current settings and keywords")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# What-If Analysis Tool (moved below Calculate Forecast button)
+# What-If Analysis Tool
 st.header("What-If Analysis")
 st.markdown("Analyze how changes in conversion rate impact your forecast after calculating your initial forecast.")
 
@@ -616,22 +697,23 @@ with st.expander("Adjust Conversion Rate"):
         if min_conversion >= max_conversion:
             st.error("Minimum conversion rate must be less than maximum conversion rate.")
         else:
-            # Generate range of conversion rates
             steps = 5
             conversion_range = np.linspace(min_conversion, max_conversion, steps)
             what_if_data = []
 
-            # Get the CTR table for the selected model
             selected_ctr_table = ctr_models[ctr_model]
 
             for cr in conversion_range:
                 keywords = st.session_state.keywords.copy()
-                # Adjust target position based on keyword difficulty
                 keywords['adjustedTargetPosition'] = keywords.apply(
                     lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
                 )
-                current_traffic = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
-                target_traffic = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table)) * keywords['searchVolume']
+                current_traffic = keywords['position'].apply(
+                    lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+                ) * keywords['searchVolume']
+                target_traffic = keywords['adjustedTargetPosition'].apply(
+                    lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+                ) * keywords['searchVolume']
                 traffic_gain = target_traffic - current_traffic
                 conversion_gain = traffic_gain * (cr / 100)
                 revenue_gain = conversion_gain * aov
@@ -656,7 +738,6 @@ with st.expander("Adjust Conversion Rate"):
                 use_container_width=True
             )
 
-            # Plot the what-if analysis
             fig = px.line(
                 what_if_df,
                 x="Conversion Rate (%)",
@@ -675,23 +756,24 @@ with st.expander("Adjust Conversion Rate"):
 if calculate_button:
     if len(st.session_state.keywords) > 0:
         keywords = st.session_state.keywords.copy()
-        # Get the CTR table for the selected model
         selected_ctr_table = ctr_models[ctr_model]
-        keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
-        # Adjust target position based on keyword difficulty
+        keywords['currentCTR'] = keywords['position'].apply(
+            lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+        )
         keywords['adjustedTargetPosition'] = keywords.apply(
             lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
         )
-        keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+        keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(
+            lambda pos: get_ctr(pos, selected_ctr_table, featured_snippet_present, in_featured_snippet, faq_present, in_faq)
+        )
         keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
         keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
         keywords['trafficGain'] = keywords['targetTraffic'] - keywords['currentTraffic']
         keywords['conversionGain'] = keywords['trafficGain'] * (conversion_rate / 100)
         keywords['revenueGain'] = keywords['conversionGain'] * aov
         
-        # Add confidence intervals
-        ctr_std = 0.10  # Assume 10% standard deviation for CTR
-        z_score = 1.96  # For 95% confidence interval
+        ctr_std = 0.10
+        z_score = 1.96
         keywords['currentCTR_std'] = keywords['currentCTR'] * ctr_std
         keywords['targetCTR_std'] = keywords['targetCTR'] * ctr_std
         keywords['currentTraffic_std'] = keywords['searchVolume'] * keywords['currentCTR_std']
@@ -712,13 +794,10 @@ if calculate_button:
         revenue_ci_lower = total_revenue_gain - z_score * total_revenue_gain_std
         revenue_ci_upper = total_revenue_gain + z_score * total_revenue_gain_std
         
-        # Calculate CPA (Cost Per Acquisition)
         cpa = implementation_cost / total_conversion_gain if total_conversion_gain > 0 else float('inf')
         
-        # Display summary metrics with confidence intervals
         st.header("Forecast Results")
         
-        # Add CSS for tooltips
         st.markdown("""
             <style>
             .tooltip {
@@ -746,7 +825,6 @@ if calculate_button:
                 visibility: visible;
                 opacity: 1;
             }
-            /* Style for CI text below metrics */
             .ci-text {
                 font-size: 12px;
                 color: #666;
@@ -755,9 +833,8 @@ if calculate_button:
             </style>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3, col4 = st.columns(4)  # Added a fourth column for CPA
+        col1, col2, col3, col4 = st.columns(4)
         
-        # Calculate percentage changes safely
         traffic_percent = 0 if keywords['currentTraffic'].sum() == 0 else keywords['trafficGain'].sum() / keywords['currentTraffic'].sum() * 100
         conv_percent = 0 if keywords['currentTraffic'].sum() == 0 else (total_conversion_gain / (keywords['currentTraffic'].sum() * conversion_rate / 100) * 100) if (keywords['currentTraffic'].sum() * conversion_rate / 100) != 0 else 0
         revenue_percent = 0 if keywords['currentTraffic'].sum() == 0 else (total_revenue_gain / (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) * 100) if (keywords['currentTraffic'].sum() * conversion_rate / 100 * aov) != 0 else 0
@@ -785,7 +862,6 @@ if calculate_button:
                 </div>
             """, unsafe_allow_html=True)
             st.metric("", f"{currency_symbol}{int(total_revenue_gain):,}", f"+{revenue_percent:.1f}%")
-            # Format CI with shorter numbers (e.g., use K for thousands)
             revenue_ci_lower_display = f"{int(revenue_ci_lower/1000)}K" if revenue_ci_lower >= 10000 else f"{int(revenue_ci_lower)}"
             revenue_ci_upper_display = f"{int(revenue_ci_upper/1000)}K" if revenue_ci_upper >= 10000 else f"{int(revenue_ci_upper)}"
             st.markdown(f'<div class="ci-text">95% CI: {currency_symbol}{revenue_ci_lower_display} - {currency_symbol}{revenue_ci_upper_display}</div>', unsafe_allow_html=True)
@@ -793,9 +869,7 @@ if calculate_button:
             st.markdown("Cost Per Acquisition (CPA)")
             st.metric("", f"{currency_symbol}{cpa:.2f}" if cpa != float('inf') else "N/A")
         
-        # Break-Even Analysis
         st.markdown("### Break-Even Analysis", unsafe_allow_html=True)
-        # Calculate monthly projections for break-even analysis
         monthly_data_temp = []
         cumulative_traffic = 0
         cumulative_conversions = 0
@@ -814,10 +888,9 @@ if calculate_button:
             month_idx = (current_month + i) % 12
             month_name = pd.Timestamp(year=2023, month=month_idx+1, day=1).strftime('%b')
             progress = i / (projection_months - 1) if projection_months > 1 else 1
-            # Updated growth factor with keyword difficulty and lag
             avg_difficulty = keywords['keywordDifficulty'].mean()
-            k = 10 / (1 + avg_difficulty / 2)  # Slower growth for higher difficulty
-            delay = 0.2  # 2-month lag (0.2 of the projection period)
+            k = 10 / (1 + avg_difficulty / 2)
+            delay = 0.2
             growth_factor = 1 / (1 + np.exp(-k * (progress - delay)))
             season_factor = seasonality[category][month_idx]
             month_factor = growth_factor * season_factor
@@ -840,7 +913,6 @@ if calculate_button:
                 break_even_month = i + 1
                 break
         
-        # Display Break-Even Analysis in a styled container
         if break_even_month:
             st.markdown(
                 f"""
@@ -862,7 +934,6 @@ if calculate_button:
                 unsafe_allow_html=True
             )
         
-        # Break-Even Progress Chart
         break_even_df = pd.DataFrame(monthly_data_temp)
         fig = px.line(
             break_even_df,
@@ -881,7 +952,6 @@ if calculate_button:
         )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Generate monthly projections
         st.header(f"Monthly Projections ({projection_months} Months)")
         
         monthly_data = []
@@ -893,7 +963,6 @@ if calculate_button:
             month_idx = (current_month + i) % 12
             month_name = pd.Timestamp(year=2023, month=month_idx+1, day=1).strftime('%b')
             progress = i / (projection_months - 1) if projection_months > 1 else 1
-            # Updated growth factor with keyword difficulty and lag
             growth_factor = 1 / (1 + np.exp(-k * (progress - delay)))
             season_factor = seasonality[category][month_idx]
             month_factor = growth_factor * season_factor
@@ -924,7 +993,6 @@ if calculate_button:
                 "Cumulative Revenue": cumulative_revenue
             })
         
-        # Add total row
         monthly_data.append({
             "Month": "TOTAL",
             "Growth Factor": None,
@@ -940,7 +1008,6 @@ if calculate_button:
             "Cumulative Revenue": cumulative_revenue
         })
         
-        # Display monthly projections
         monthly_df = pd.DataFrame(monthly_data)
         display_df = monthly_df[["Month", "Traffic Gain", "Conversion Gain", "Revenue", "ROI", "Cumulative"]].copy()
         
@@ -958,7 +1025,6 @@ if calculate_button:
             use_container_width=True
         )
         
-        # Create visualization with plotly
         st.subheader("Monthly Projection Chart")
         
         fig = px.line(
@@ -987,7 +1053,6 @@ if calculate_button:
         ))
         st.plotly_chart(fig, use_container_width=True)
         
-        # Keyword details
         st.header("Keyword Details")
         
         keyword_display = keywords.copy()
@@ -996,7 +1061,6 @@ if calculate_button:
         keyword_display['Traffic Gain'] = keyword_display['trafficGain'].round(0).astype(int)
         keyword_display['Revenue Gain'] = keyword_display['revenueGain'].round(0).astype(int)
         
-        # Calculate percentage changes for Traffic Gain and Revenue Gain
         keyword_display['Traffic Gain %'] = keyword_display.apply(
             lambda row: 0 if row['currentTraffic'] == 0 else (row['trafficGain'] / row['currentTraffic'] * 100), axis=1
         )
@@ -1005,7 +1069,6 @@ if calculate_button:
             if (row['currentTraffic'] * conversion_rate / 100 * aov) != 0 else 0, axis=1
         )
         
-        # Format Revenue Gain with currency symbol and percentage changes
         keyword_display['Revenue Gain'] = currency_symbol + keyword_display['Revenue Gain'].astype(str)
         keyword_display['Traffic Gain %'] = keyword_display['Traffic Gain %'].apply(lambda x: f"{x:.1f}%")
         keyword_display['Revenue Gain %'] = keyword_display['Revenue Gain %'].apply(lambda x: f"{x:.1f}%")
@@ -1031,7 +1094,6 @@ if calculate_button:
             use_container_width=True
         )
         
-        # Download button for results
         csv = keyword_display[['keyword', 'searchVolume', 'position', 'targetPosition', 'keywordDifficulty', 'adjustedTargetPosition', 
                                'Current Traffic', 'Target Traffic', 'Traffic Gain', 'Traffic Gain %', 'Revenue Gain', 'Revenue Gain %']].to_csv(index=False).encode('utf-8')
         st.download_button(
