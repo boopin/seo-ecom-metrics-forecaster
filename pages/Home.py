@@ -9,11 +9,11 @@ from io import StringIO
 # Set page configuration for browser tab title and favicon
 st.set_page_config(
     page_title="EcomSEO Predictor",
-    page_icon="📈",  # You can replace this with a URL to a favicon image (e.g., "https://example.com/favicon.ico")
+    page_icon="📈",  # Replace with a URL to a favicon image if available
     layout="wide"
 )
 
-# Inject meta tags using st.markdown
+# Inject meta tags for SEO and social media sharing
 st.markdown("""
     <head>
         <meta name="description" content="EcomSEO Predictor: Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.">
@@ -29,6 +29,116 @@ st.markdown("""
     </head>
 """, unsafe_allow_html=True)
 
+# Global CSS for consistent styling
+st.markdown("""
+    <style>
+        /* Define color variables */
+        :root {
+            --primary: #2563eb;
+            --secondary: #10b981;
+            --neutral: #374151; /* Darker gray for better contrast */
+            --background: #f9fafb;
+            --error: #ef4444;
+        }
+        /* Apply colors to headers */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--primary);
+        }
+        /* Style for success messages */
+        .stSuccess {
+            background-color: var(--secondary) !important;
+            color: white !important;
+        }
+        /* Style for error messages */
+        .stError {
+            background-color: var(--error) !important;
+            color: white !important;
+        }
+        /* Style for containers */
+        .stContainer {
+            background-color: var(--background);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        /* Style for buttons */
+        .stButton > button {
+            background-color: var(--primary);
+            color: white;
+            border-radius: 8px;
+            border: none;
+            padding: 10px 20px;
+        }
+        .stButton > button:hover {
+            background-color: #1d4ed8; /* Darker shade of primary */
+        }
+        /* Style for secondary buttons (e.g., Reset to Defaults) */
+        .stButton > button[kind="secondary"] {
+            background-color: #6b7280;
+            color: white;
+        }
+        .stButton > button[kind="secondary"]:hover {
+            background-color: #4b5563;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Show Getting Started modal for first-time users
+if 'first_visit' not in st.session_state:
+    st.session_state.first_visit = True
+
+if st.session_state.first_visit:
+    st.markdown("""
+        <style>
+            .modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            }
+            .modal-content {
+                background-color: white;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 500px;
+                text-align: center;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .modal-content button {
+                background-color: #2563eb;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                margin-top: 20px;
+            }
+            .modal-content button:hover {
+                background-color: #1d4ed8;
+            }
+        </style>
+        <div class='modal'>
+            <div class='modal-content'>
+                <h2>Welcome to EcomSEO Predictor! 🚀</h2>
+                <p>Forecast your e-commerce SEO performance with ease. Follow these steps:</p>
+                <ol style='text-align: left;'>
+                    <li>Configure your settings in the sidebar.</li>
+                    <li>Add or upload keywords.</li>
+                    <li>Click "Calculate Forecast" to see your results.</li>
+                    <li>(Optional) Use the "What-If Analysis" to explore scenarios.</li>
+                </ol>
+                <button onclick='this.parentElement.parentElement.style.display="none"'>Get Started</button>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+    st.session_state.first_visit = False
+
 # Page title
 st.markdown("""
     <div style='display: flex; align-items: center; margin-bottom: 8px;'>
@@ -41,8 +151,93 @@ st.markdown("""
     <p style='margin-bottom: 16px; color: #4b5563; font-style: italic;'>Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.</p>
 """, unsafe_allow_html=True)
 
+# Progress stepper
+st.markdown("""
+    <style>
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+        .stepper li {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .stepper li span {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .stepper li.active span {
+            background-color: #2563eb;
+            color: white;
+        }
+        .stepper li p {
+            margin: 0;
+            font-size: 14px;
+            color: #4b5563;
+        }
+        .stepper li:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background-color: #e5e7eb;
+            z-index: -1;
+        }
+        .stepper li.active:not(:last-child)::after {
+            background-color: #2563eb;
+        }
+    </style>
+    <ul class='stepper'>
+        <li class='active'>
+            <span>1</span>
+            <p>Configure Settings</p>
+        </li>
+        <li class='active'>
+            <span>2</span>
+            <p>Add Keywords</p>
+        </li>
+        <li>
+            <span>3</span>
+            <p>Calculate Forecast</p>
+        </li>
+        <li>
+            <span>4</span>
+            <p>Explore What-If</p>
+        </li>
+        <li>
+            <span>5</span>
+            <p>View Results</p>
+        </li>
+    </ul>
+""", unsafe_allow_html=True)
+
 # Sidebar for settings
 st.sidebar.header("Settings")
+
+# Quick Start button
+if st.sidebar.button("Quick Start", help="Use default settings and start adding keywords"):
+    st.session_state.settings = default_settings.copy()
+    st.session_state.settings["conversion_rate"] = 3.0
+    st.session_state.settings["aov"] = 250
+    st.session_state.settings["implementation_cost"] = 5000
+    st.session_state.settings["projection_months"] = 6
+    st.session_state.settings["category"] = "Fashion & Apparel"
+    st.session_state.settings["currency_selection"] = "USD ($)"
+    st.session_state.settings["ctr_model"] = "E-commerce"
+    st.experimental_rerun()
 
 # Default settings for reset functionality
 default_settings = {
@@ -125,8 +320,17 @@ implementation_cost = st.sidebar.number_input(
     100, 20000, st.session_state.settings["implementation_cost"], 100,
     help=f"The total cost of implementing the SEO strategy in {currency_symbol} (e.g., agency fees, content creation)."
 )
+st.markdown("""
+    <div style='display: flex; align-items: center; gap: 5px;'>
+        <span>CTR Model</span>
+        <span style='cursor: pointer; color: #2563eb;'
+              title='Click-Through Rate (CTR) model determines how likely users are to click on your site based on its search position. Choose a model that matches your industry.'>
+            ℹ️
+        </span>
+    </div>
+""", unsafe_allow_html=True)
 ctr_model = st.sidebar.selectbox(
-    "CTR Model",
+    "",
     list(ctr_models.keys()),
     help="Select the Click-Through Rate (CTR) model based on your industry. E-commerce sites typically have higher CTRs for top positions, while informational sites have higher CTRs overall but drop off faster."
 )
@@ -143,7 +347,7 @@ st.session_state.settings.update({
 })
 
 # Reset to Defaults button
-if st.sidebar.button("Reset to Defaults"):
+if st.sidebar.button("Reset to Defaults", type="secondary"):
     # Clear session state to ensure defaults are applied
     if 'settings' in st.session_state:
         del st.session_state.settings
@@ -152,185 +356,248 @@ if st.sidebar.button("Reset to Defaults"):
     # Rerun the app to apply the defaults
     st.rerun()
 
-# File upload
-st.header("Upload Keywords")
-st.markdown("Upload a CSV or Excel file with keywords, search volumes, and current positions")
+# Step 1: Prepare Your Data
+with st.container():
+    st.markdown("### Step 1: Prepare Your Data")
+    # File upload
+    st.header("Upload Keywords")
+    st.markdown("Upload a CSV or Excel file with keywords, search volumes, and current positions")
 
-col1, col2 = st.columns([2, 1])
-with col1:
-    uploaded_file = st.file_uploader(
-        "Choose a file",
-        type=["csv", "xlsx", "xls"],
-        help="Upload a CSV or Excel file containing your keyword data."
-    )
-with col2:
-    st.markdown("#### Supported Formats")
-    st.markdown("- CSV files (.csv)")
-    st.markdown("- Excel files (.xlsx, .xls)")
-    st.markdown("#### Required Columns")
-    st.markdown("- Keyword/Search Term")
-    st.markdown("- Search Volume")
-    st.markdown("- Current Position (optional)")
-
-# Process uploaded file
-if uploaded_file is not None:
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-            
-        # Try to map columns
-        keyword_cols = ["keyword", "term", "query", "search term"]
-        volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
-        position_cols = ["position", "rank", "ranking", "pos", "serp"]
-        difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]
-        
-        # Find the right columns (case insensitive)
-        df.columns = df.columns.str.lower()
-        
-        keyword_col = next((col for col in df.columns if any(kw in col for kw in keyword_cols)), df.columns[0])
-        volume_col = next((col for col in df.columns if any(vol in col for vol in volume_cols)), 
-                        df.columns[1] if len(df.columns) > 1 else None)
-        position_col = next((col for col in df.columns if any(pos in col for pos in position_cols)), 
-                          df.columns[2] if len(df.columns) > 2 else None)
-        difficulty_col = next((col for col in df.columns if any(diff in col for diff in difficulty_cols)), 
-                              None)
-        
-        # Create new dataframe
-        new_df = pd.DataFrame()
-        new_df['keyword'] = df[keyword_col]
-        
-        if volume_col:
-            new_df['searchVolume'] = pd.to_numeric(df[volume_col], errors='coerce').fillna(0).astype(int)
-        else:
-            new_df['searchVolume'] = 0
-            
-        if position_col:
-            new_df['position'] = pd.to_numeric(df[position_col], errors='coerce').fillna(20).astype(int)
-        else:
-            new_df['position'] = 20
-            
-        # Calculate target position - improve by 50% but not below 1
-        new_df['targetPosition'] = new_df['position'].apply(lambda x: max(1, int(x * 0.5)))
-        
-        # Add keyword difficulty (default to 5 if not in file)
-        if difficulty_col:
-            new_df['keywordDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
-        else:
-            new_df['keywordDifficulty'] = 5
-        
-        st.session_state.keywords = new_df
-        st.success(f"Successfully imported {len(new_df)} keywords!")
-        
-    except Exception as e:
-        st.error(f"Error processing file: {e}")
-
-# Display and edit keywords
-st.header("Keywords")
-
-# Add new keyword form with tooltips
-with st.expander("Add New Keyword"):
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2 = st.columns([2, 1])
     with col1:
-        new_keyword = st.text_input(
-            "Keyword",
-            help="Enter the keyword or search term (e.g., 'gas bbq')."
+        uploaded_file = st.file_uploader(
+            "Choose a file",
+            type=["csv", "xlsx", "xls"],
+            help="Upload a CSV or Excel file containing your keyword data."
         )
     with col2:
-        new_volume = st.number_input(
-            "Search Volume",
-            0, 1000000, 1000,
-            help="The average monthly search volume for the keyword (e.g., 8000 searches per month)."
-        )
-    with col3:
-        new_position = st.number_input(
-            "Current Position",
-            1, 100, 10,
-            help="The current ranking position in search results (1-100, where 1 is the top position)."
-        )
-    with col4:
-        new_target = st.number_input(
-            "Target Position",
-            1, 100, 5,
-            help="The desired ranking position to achieve (1-100, typically better than the current position)."
-        )
-    with col5:
-        new_difficulty = st.number_input(
-            "Keyword Difficulty",
-            1, 10, 5,
-            help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
-        )
-        
-    if st.button("Add Keyword"):
-        if new_keyword:
-            new_row = pd.DataFrame({
-                "keyword": [new_keyword],
-                "searchVolume": [new_volume],
-                "position": [new_position],
-                "targetPosition": [new_target],
-                "keywordDifficulty": [new_difficulty]
-            })
-            st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
-            st.success("Keyword added!")
+        st.markdown("#### Supported Formats")
+        st.markdown("- CSV files (.csv)")
+        st.markdown("- Excel files (.xlsx, .xls)")
+        st.markdown("#### Required Columns")
+        st.markdown("- Keyword/Search Term")
+        st.markdown("- Search Volume")
+        st.markdown("- Current Position (optional)")
 
-# Display editable table with responsive design
+    # Process uploaded file
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+                
+            # Try to map columns
+            keyword_cols = ["keyword", "term", "query", "search term"]
+            volume_cols = ["volume", "search volume", "monthly searches", "monthly search volume", "monthly volume", "searches"]
+            position_cols = ["position", "rank", "ranking", "pos", "serp"]
+            difficulty_cols = ["difficulty", "keyword difficulty", "kw difficulty", "seo difficulty"]
+            
+            # Find the right columns (case insensitive)
+            df.columns = df.columns.str.lower()
+            
+            keyword_col = next((col for col in df.columns if any(kw in col for kw in keyword_cols)), df.columns[0])
+            volume_col = next((col for col in df.columns if any(vol in col for vol in volume_cols)), 
+                            df.columns[1] if len(df.columns) > 1 else None)
+            position_col = next((col for col in df.columns if any(pos in col for pos in position_cols)), 
+                              df.columns[2] if len(df.columns) > 2 else None)
+            difficulty_col = next((col for col in df.columns if any(diff in col for diff in difficulty_cols)), 
+                                  None)
+            
+            # Create new dataframe
+            new_df = pd.DataFrame()
+            new_df['keyword'] = df[keyword_col]
+            
+            if volume_col:
+                new_df['searchVolume'] = pd.to_numeric(df[volume_col], errors='coerce').fillna(0).astype(int)
+            else:
+                new_df['searchVolume'] = 0
+                
+            if position_col:
+                new_df['position'] = pd.to_numeric(df[position_col], errors='coerce').fillna(20).astype(int)
+            else:
+                new_df['position'] = 20
+                
+            # Calculate target position - improve by 50% but not below 1
+            new_df['targetPosition'] = new_df['position'].apply(lambda x: max(1, int(x * 0.5)))
+            
+            # Add keyword difficulty (default to 5 if not in file)
+            if difficulty_col:
+                new_df['keywordDifficulty'] = pd.to_numeric(df[difficulty_col], errors='coerce').clip(1, 10).fillna(5).astype(int)
+            else:
+                new_df['keywordDifficulty'] = 5
+            
+            st.session_state.keywords = new_df
+            st.success(f"Successfully imported {len(new_df)} keywords!")
+            
+        except Exception as e:
+            st.error(f"Error processing file: {e}")
+
+    # Display and edit keywords
+    st.header("Keywords")
+
+    # Add new keyword form with tooltips
+    with st.expander("Add New Keyword"):
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            new_keyword = st.text_input(
+                "Keyword",
+                help="Enter the keyword or search term (e.g., 'gas bbq')."
+            )
+        with col2:
+            new_volume = st.number_input(
+                "Search Volume",
+                0, 1000000, 1000,
+                help="The average monthly search volume for the keyword (e.g., 8000 searches per month)."
+            )
+        with col3:
+            new_position = st.number_input(
+                "Current Position",
+                1, 100, 10,
+                help="The current ranking position in search results (1-100, where 1 is the top position)."
+            )
+        with col4:
+            new_target = st.number_input(
+                "Target Position",
+                1, 100, 5,
+                help="The desired ranking position to achieve (1-100, typically better than the current position)."
+            )
+        with col5:
+            st.markdown("""
+                <div style='display: flex; align-items: center; gap: 5px;'>
+                    <span>Keyword Difficulty</span>
+                    <span style='cursor: pointer; color: #2563eb;'
+                          title='A score from 1 to 10 indicating how hard it is to rank for this keyword. 1 = very easy, 10 = very hard.'>
+                        ℹ️
+                    </span>
+                </div>
+            """, unsafe_allow_html=True)
+            new_difficulty = st.number_input(
+                "",
+                1, 10, 5,
+                help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
+            )
+            
+        if st.button("Add Keyword", key="add_keyword", help="Add a new keyword to the list"):
+            if new_keyword:
+                new_row = pd.DataFrame({
+                    "keyword": [new_keyword],
+                    "searchVolume": [new_volume],
+                    "position": [new_position],
+                    "targetPosition": [new_target],
+                    "keywordDifficulty": [new_difficulty]
+                })
+                st.session_state.keywords = pd.concat([st.session_state.keywords, new_row], ignore_index=True)
+                st.success("Keyword added!")
+
+    # Display editable table with responsive design
+    st.markdown("""
+        <style>
+            @media (max-width: 640px) {
+                .stDataFrame {
+                    font-size: 12px;
+                }
+                .stDataFrame th, .stDataFrame td {
+                    padding: 4px !important;
+                }
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    edited_df = st.data_editor(
+        st.session_state.keywords,
+        num_rows="dynamic",
+        hide_index=True,
+        column_config={
+            "keyword": st.column_config.TextColumn(
+                "Keyword",
+                help="The keyword or search term."
+            ),
+            "searchVolume": st.column_config.NumberColumn(
+                "Search Volume",
+                min_value=0,
+                format="%d",
+                help="The average monthly search volume for the keyword."
+            ),
+            "position": st.column_config.NumberColumn(
+                "Current Position",
+                min_value=1,
+                max_value=100,
+                step=1,
+                help="The current ranking position in search results (1-100)."
+            ),
+            "targetPosition": st.column_config.NumberColumn(
+                "Target Position",
+                min_value=1,
+                max_value=100,
+                step=1,
+                help="The desired ranking position to achieve (1-100)."
+            ),
+            "keywordDifficulty": st.column_config.NumberColumn(
+                "Keyword Difficulty",
+                min_value=1,
+                max_value=10,
+                step=1,
+                help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
+            )
+        },
+        use_container_width=True
+    )
+    st.session_state.keywords = edited_df
+
+    # Preview Forecast button
+    if st.button("Preview Forecast", help="Get a quick estimate of your traffic gain based on current settings"):
+        if len(st.session_state.keywords) > 0:
+            keywords = st.session_state.keywords.copy()
+            selected_ctr_table = ctr_models[ctr_model]
+            keywords['currentCTR'] = keywords['position'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+            keywords['adjustedTargetPosition'] = keywords.apply(
+                lambda row: max(1, int(row['position'] - (row['position'] - row['targetPosition']) * (1 - row['keywordDifficulty'] / 10))), axis=1
+            )
+            keywords['targetCTR'] = keywords['adjustedTargetPosition'].apply(lambda pos: get_ctr(pos, selected_ctr_table))
+            keywords['currentTraffic'] = keywords['searchVolume'] * keywords['currentCTR']
+            keywords['targetTraffic'] = keywords['searchVolume'] * keywords['targetCTR']
+            traffic_gain = (keywords['targetTraffic'] - keywords['currentTraffic']).sum()
+            st.info(f"**Estimated Traffic Gain**: {int(traffic_gain):,} visitors per month")
+        else:
+            st.warning("Please add at least one keyword to preview the forecast.")
+
+    # Clear Keywords button
+    if st.button("Clear Keywords", help="Remove all keywords and start fresh"):
+        st.session_state.keywords = pd.DataFrame({
+            "keyword": [],
+            "searchVolume": [],
+            "position": [],
+            "targetPosition": [],
+            "keywordDifficulty": []
+        })
+        st.experimental_rerun()
+
+# Calculate button with icon
 st.markdown("""
     <style>
-        @media (max-width: 640px) {
-            .stDataFrame {
-                font-size: 12px;
-            }
-            .stDataFrame th, .stDataFrame td {
-                padding: 4px !important;
-            }
+        .calculate-button {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .calculate-button button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .calculate-button button:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s ease-in-out;
         }
     </style>
+    <div class='calculate-button'>
 """, unsafe_allow_html=True)
-
-edited_df = st.data_editor(
-    st.session_state.keywords,
-    num_rows="dynamic",
-    hide_index=True,
-    column_config={
-        "keyword": st.column_config.TextColumn(
-            "Keyword",
-            help="The keyword or search term."
-        ),
-        "searchVolume": st.column_config.NumberColumn(
-            "Search Volume",
-            min_value=0,
-            format="%d",
-            help="The average monthly search volume for the keyword."
-        ),
-        "position": st.column_config.NumberColumn(
-            "Current Position",
-            min_value=1,
-            max_value=100,
-            step=1,
-            help="The current ranking position in search results (1-100)."
-        ),
-        "targetPosition": st.column_config.NumberColumn(
-            "Target Position",
-            min_value=1,
-            max_value=100,
-            step=1,
-            help="The desired ranking position to achieve (1-100)."
-        ),
-        "keywordDifficulty": st.column_config.NumberColumn(
-            "Keyword Difficulty",
-            min_value=1,
-            max_value=10,
-            step=1,
-            help="A score from 1 to 10 indicating how difficult it is to rank for this keyword (1 = easy, 10 = very hard)."
-        )
-    },
-    use_container_width=True
-)
-st.session_state.keywords = edited_df
-
-# Calculate button
-calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
+calculate_button = st.button("Calculate Forecast 📊", type="primary", use_container_width=True, key="calculate_forecast", 
+                            help="Generate your SEO forecast based on the current settings and keywords")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # What-If Analysis Tool (moved below Calculate Forecast button)
 st.header("What-If Analysis")
