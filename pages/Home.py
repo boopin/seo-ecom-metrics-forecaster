@@ -26,7 +26,7 @@ default_settings = {
     "category": "BBQ & Outdoor Cooking",
     "projection_months": 6,
     "conversion_rate": 3.0,
-    "currency_selection": "GBP (£)",
+    "currency_selection": "USD ($)",  # Changed from "GBP (£)" to "USD ($)"
     "aov": 250,
     "implementation_cost": 5000,
     "ctr_model": "Default"
