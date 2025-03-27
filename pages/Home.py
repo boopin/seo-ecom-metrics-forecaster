@@ -234,9 +234,14 @@ default_settings = {
     "in_faq": False
 }
 
-# Initialize session state for settings if not already present
+# Initialize session state for settings if not already present, and ensure all keys exist
 if 'settings' not in st.session_state:
     st.session_state.settings = default_settings.copy()
+else:
+    # Ensure all keys from default_settings are present in st.session_state.settings
+    for key, value in default_settings.items():
+        if key not in st.session_state.settings:
+            st.session_state.settings[key] = value
 
 # Initialize session state for keywords if not already present
 if 'keywords' not in st.session_state:
