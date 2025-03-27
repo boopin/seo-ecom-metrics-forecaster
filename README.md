@@ -1,4 +1,4 @@
-# SEO Forecasting Tool
+# E-Com SEO Metrics Predictor
 
 An interactive web application to forecast SEO performance, traffic, conversions, and revenue based on keyword rankings.
 
