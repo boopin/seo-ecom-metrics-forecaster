@@ -14,7 +14,7 @@ st.markdown("""
         </svg>
         <span style='font-size: 14px; color: #2563eb;'>Powered by Boopin</span>
     </div>
-    <h1 style='font-size: 2.25rem; font-weight: bold; margin-bottom: 16px;'>EcomSEO Predictor - Main App</h1>
+    <h1 style='font-size: 2.25rem; font-weight: bold; margin-bottom: 16px;'>EcomSEO Predictor</h1>
     <p style='margin-bottom: 16px; color: #4b5563; font-style: italic;'>Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.</p>
 """, unsafe_allow_html=True)
 
