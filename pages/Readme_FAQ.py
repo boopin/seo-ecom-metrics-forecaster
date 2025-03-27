@@ -128,6 +128,23 @@ If you're new to tools like this or not familiar with SEO, don’t worry! We’l
 **You Did It!** 🎉 You’ve just used EcomSEO Predictor to see how SEO can grow your online store. If you get stuck or have questions, check out the "Additional Resources" section below for ways to get help.
 """)
 
+# Frequently Asked Questions
+st.header("Frequently Asked Questions")
+st.markdown("""
+Here are answers to some common questions about EcomSEO Predictor:
+
+**How does the tool account for the impact of ads and organic features like listings, FAQs, or featured snippets on CTR?**
+
+When someone searches on Google, the results page often includes ads at the top, along with features like product listings, FAQs, or featured snippets (a box with a quick answer). These can affect how many people click on your website, even if you rank in a good position. This percentage of clicks is called the Click-Through Rate (CTR).
+
+Here’s how EcomSEO Predictor handles this:
+- The tool uses preset "CTR models" to estimate how many people will click on your website based on its position in search results. We have three models: "Default", "E-commerce", and "Informational". Each model is based on average data from many search results and reflects typical click rates for different types of searches.
+- For example, the "E-commerce" model assumes more people click on top results because product searches often have ads and listings, while the "Informational" model assumes higher clicks for content-focused searches (like blog posts) but a faster drop-off for lower positions.
+- You can choose the model that best matches your business in the "Settings" section (under "CTR Model"). If your products show up in searches with lots of ads or listings (like "buy summer dress"), the "E-commerce" model might be a better fit.
+- **Limitations**: The tool doesn’t look at the actual search results page for your keywords, so it can’t adjust for specific ads or features like a featured snippet. This would require live data from Google, which the tool doesn’t have access to.
+- **What You Can Do**: Pick the CTR model that best fits your industry. If you know your keywords often have ads or special features at the top, you might expect slightly lower clicks than the tool predicts, especially for positions 1-3. You can also use the "What-If Analysis" to test different scenarios and see how changes in clicks might affect your results.
+""")
+
 # Additional Resources
 st.header("Additional Resources")
 st.markdown("""
