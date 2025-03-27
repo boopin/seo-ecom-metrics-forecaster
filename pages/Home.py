@@ -83,62 +83,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Show Getting Started modal for first-time users
-if 'first_visit' not in st.session_state:
-    st.session_state.first_visit = True
-
-if st.session_state.first_visit:
-    st.markdown("""
-        <style>
-            .modal {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-            }
-            .modal-content {
-                background-color: white;
-                padding: 20px;
-                border-radius: 8px;
-                max-width: 500px;
-                text-align: center;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .modal-content button {
-                background-color: #2563eb;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                margin-top: 20px;
-            }
-            .modal-content button:hover {
-                background-color: #1d4ed8;
-            }
-        </style>
-        <div class='modal'>
-            <div class='modal-content'>
-                <h2>Welcome to EcomSEO Predictor! 🚀</h2>
-                <p>Forecast your e-commerce SEO performance with ease. Follow these steps:</p>
-                <ol style='text-align: left;'>
-                    <li>Configure your settings in the sidebar.</li>
-                    <li>Add or upload keywords.</li>
-                    <li>Click "Calculate Forecast" to see your results.</li>
-                    <li>(Optional) Use the "What-If Analysis" to explore scenarios.</li>
-                </ol>
-                <button onclick='this.parentElement.parentElement.style.display="none"'>Get Started</button>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-    st.session_state.first_visit = False
-
 # Page title
 st.markdown("""
     <div style='display: flex; align-items: center; margin-bottom: 8px;'>
