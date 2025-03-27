@@ -26,7 +26,7 @@ default_settings = {
     "category": "BBQ & Outdoor Cooking",
     "projection_months": 6,
     "conversion_rate": 3.0,
-    "currency_selection": "USD ($)",  # Changed from "GBP (£)" to "USD ($)"
+    "currency_selection": "USD ($)",  # Default currency is USD
     "aov": 250,
     "implementation_cost": 5000,
     "ctr_model": "Default"
@@ -88,6 +88,7 @@ currency_options = {"GBP (£)": "£", "EUR (€)": "€", "USD ($)": "$", "AED (
 currency_selection = st.sidebar.selectbox(
     "Currency",
     list(currency_options.keys()),
+    index=list(currency_options.keys()).index(st.session_state.settings["currency_selection"]),
     help="Select the currency for revenue calculations."
 )
 currency_symbol = currency_options[currency_selection]
@@ -120,15 +121,13 @@ st.session_state.settings.update({
 
 # Reset to Defaults button
 if st.sidebar.button("Reset to Defaults"):
-    st.session_state.settings = default_settings.copy()
-    st.session_state.keywords = pd.DataFrame({
-        "keyword": ["gas bbq", "charcoal bbq", "bbq grill"],
-        "searchVolume": [8000, 6500, 5000],
-        "position": [8, 12, 9],
-        "targetPosition": [3, 5, 4],
-        "keywordDifficulty": [5, 5, 5]
-    })
-    st.experimental_rerun()
+    # Clear session state to ensure defaults are applied
+    if 'settings' in st.session_state:
+        del st.session_state.settings
+    if 'keywords' in st.session_state:
+        del st.session_state.keywords
+    # Rerun the app to apply the defaults
+    st.rerun()  # Changed from st.experimental_rerun() to st.rerun()
 
 # File upload
 st.header("Upload Keywords")
