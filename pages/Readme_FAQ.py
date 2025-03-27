@@ -56,7 +56,7 @@ Follow these steps to get started with EcomSEO Predictor:
      - **Currency**: Select your preferred currency for revenue calculations (e.g., USD, GBP).
      - **Average Order Value (AOV)**: Enter the average amount a customer spends per order (e.g., $250).
      - **Implementation Cost**: Enter the cost of your SEO strategy (e.g., $5000 for agency fees, content creation).
-     - **CTR Model**: Choose a click-through rate model based on your industry (e.g., "E-commerce").
+     - **CTR Model**: Choose a click-through rate model based on your industry (e.g., "E-commerce") or "Custom" to set your own rates.
 
 3. **Input Keywords**:
    - **Upload a File**: Upload a CSV or Excel file with your keyword data (required columns: Keyword, Search Volume; optional: Current Position).
@@ -139,10 +139,29 @@ When someone searches on Google, the results page often includes ads at the top,
 
 Here’s how EcomSEO Predictor handles this:
 - The tool uses preset "CTR models" to estimate how many people will click on your website based on its position in search results. We have three models: "Default", "E-commerce", and "Informational". Each model is based on average data from many search results and reflects typical click rates for different types of searches.
-- For example, the "E-commerce" model assumes more people click on top results because product searches often have ads and listings, while the "Informational" model assumes higher clicks for content-focused searches (like blog posts) but a faster drop-off for lower positions.
+- For example, the "E-commerce" model assumes more people click on top results because product searches often have ads and listings (e.g., 30% for position 1), while the "Informational" model assumes higher clicks for content-focused searches (like blog posts, e.g., 35% for position 1) but a faster drop-off for lower positions.
 - You can choose the model that best matches your business in the "Settings" section (under "CTR Model"). If your products show up in searches with lots of ads or listings (like "buy summer dress"), the "E-commerce" model might be a better fit.
-- **Limitations**: The tool doesn’t look at the actual search results page for your keywords, so it can’t adjust for specific ads or features like a featured snippet. This would require live data from Google, which the tool doesn’t have access to.
+- **SERP Features Adjustments**: In the sidebar under "SERP Features Adjustments", you can check boxes if your keywords have a "Featured Snippet Present" or "FAQ Present". If your site is in these features (e.g., "My site is in the Featured Snippet"), the tool increases your CTR by 10%. If not, it lowers it slightly (e.g., 20% decrease for position 1 if a featured snippet is present but not yours). This helps account for how these features might steal or boost clicks.
+- **Limitations**: The tool doesn’t look at the actual search results page for your keywords, so it can’t adjust for specific ads or features beyond these general rules. This would require live data from Google, which the tool doesn’t have access to.
 - **What You Can Do**: Pick the CTR model that best fits your industry. If you know your keywords often have ads or special features at the top, you might expect slightly lower clicks than the tool predicts, especially for positions 1-3. You can also use the "What-If Analysis" to test different scenarios and see how changes in clicks might affect your results.
+
+**What are Custom CTR inputs, and how do I use them?**
+
+The "Custom" CTR model lets you set your own click-through rates for each search position (1-10 and beyond 10) instead of using the preset models. This is useful if you have specific data about how many people click on your site from search results.
+
+- **How to Use It**: In the sidebar under "Settings", select "CTR Model" as "Custom". You’ll see a section called "Custom CTR Values (%)" where you can enter percentages for positions 1 through 10 and a value for positions beyond 10.
+- **Default Values**: By default, these are set to realistic numbers based on e-commerce trends (e.g., Position 1: 30%, Position 2: 20%, down to Position 10: 1%, and beyond 10: 0.5%). These are percentages, so 0.2 means 20%—for example, if 100 people search, 20 will click.
+- **Example**: If you know from your analytics that only 15% of people click your site when it’s in position 1 (instead of the default 30%), you can change "Pos 1" to 15. If position 5 gets 8% clicks, set "Pos 5" to 8, and so on.
+- **Why Use It**: This is great if you have data from tools like Google Search Console showing your actual CTRs, or if your industry has unique click patterns the preset models don’t match.
+- **Tip**: Enter values as percentages (e.g., 20 for 20%), and the tool will convert them to decimals (e.g., 0.2) for calculations. Make sure they decrease as positions go lower—higher positions should have higher CTRs.
+
+**How do the SERP feature adjustments work with Custom CTR inputs?**
+
+When you use the "Custom" CTR model, the SERP feature adjustments (like featured snippets or FAQs) don’t automatically apply because you’re setting your own rates. Here’s how it works:
+- **Custom CTR Only**: If you set a custom CTR (e.g., Position 1: 25%), the tool uses that exact value and doesn’t adjust it for featured snippets or FAQs. This assumes your custom numbers already account for any SERP features.
+- **Adding Adjustments**: If you want adjustments, you’ll need to factor them into your custom values yourself. For example, if position 1 normally gets 25% but you’re in a featured snippet (which might boost it by 10%), you could manually set "Pos 1" to 27.5 (25 * 1.1). If you’re not in the snippet and it lowers clicks by 20%, set it to 20 (25 * 0.8).
+- **Why This Way**: This gives you full control, but it means you need to know how features affect your clicks and adjust accordingly.
+- **Switching Models**: If you want the tool to handle SERP adjustments automatically, use a preset model like "E-commerce" instead of "Custom".
 """)
 
 # Additional Resources
