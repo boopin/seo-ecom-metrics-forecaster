@@ -80,7 +80,55 @@ st.markdown("""
         .stButton > button[kind="secondary"]:hover {
             background-color: #4b5563;
         }
+        /* Custom Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position above the icon */
+            left: 50%;
+            margin-left: -110px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* Show tooltip when active (for click support) */
+        .tooltip.active .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
+    <script>
+        // JavaScript to toggle tooltip on click
+        document.addEventListener('DOMContentLoaded', function() {
+            const tooltips = document.querySelectorAll('.tooltip');
+            tooltips.forEach(tooltip => {
+                tooltip.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+                // Close tooltip when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!tooltip.contains(e.target)) {
+                        tooltip.classList.remove('active');
+                    }
+                });
+            });
+        });
+    </script>
 """, unsafe_allow_html=True)
 
 # Page title
@@ -264,13 +312,15 @@ implementation_cost = st.sidebar.number_input(
     100, 20000, st.session_state.settings["implementation_cost"], 100,
     help=f"The total cost of implementing the SEO strategy in {currency_symbol} (e.g., agency fees, content creation)."
 )
+
+# CTR Model with custom tooltip
 st.markdown("""
     <div style='display: flex; align-items: center; gap: 5px;'>
         <span>CTR Model</span>
-        <span style='cursor: pointer; color: #2563eb;'
-              title='Click-Through Rate (CTR) model determines how likely users are to click on your site based on its search position. Choose a model that matches your industry.'>
-            ℹ️
-        </span>
+        <div class='tooltip'>
+            <span style='color: #2563eb;'>ℹ️</span>
+            <span class='tooltiptext'>Click-Through Rate (CTR) model determines how likely users are to click on your site based on its search position. Choose a model that matches your industry.</span>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 ctr_model = st.sidebar.selectbox(
