@@ -6,6 +6,29 @@ import seaborn as sns
 import plotly.express as px
 from io import StringIO
 
+# Set page configuration for browser tab title and favicon
+st.set_page_config(
+    page_title="EcomSEO Predictor",
+    page_icon="📈",  # You can replace this with a URL to a favicon image (e.g., "https://example.com/favicon.ico")
+    layout="wide"
+)
+
+# Inject meta tags using st.markdown
+st.markdown("""
+    <head>
+        <meta name="description" content="EcomSEO Predictor: Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.">
+        <meta name="keywords" content="SEO, e-commerce, forecasting, traffic prediction, conversion rate, revenue growth">
+        <meta name="author" content="Boopin">
+        <!-- Open Graph tags for social media -->
+        <meta property="og:title" content="EcomSEO Predictor">
+        <meta property="og:description" content="Forecast your e-commerce SEO performance with precision—predict traffic, conversions, and revenue growth.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://seo-ecom-metrics-forecaster.streamlit.app/Home">
+        <!-- Replace the image URL below with a relevant image for your app -->
+        <meta property="og:image" content="https://i.postimg.cc/8PqLq0zN/seo-forecasting.jpg">
+    </head>
+""", unsafe_allow_html=True)
+
 # Page title
 st.markdown("""
     <div style='display: flex; align-items: center; margin-bottom: 8px;'>
@@ -26,7 +49,7 @@ default_settings = {
     "category": "BBQ & Outdoor Cooking",
     "projection_months": 6,
     "conversion_rate": 3.0,
-    "currency_selection": "USD ($)",  # Default currency is USD
+    "currency_selection": "USD ($)",
     "aov": 250,
     "implementation_cost": 5000,
     "ctr_model": "Default"
@@ -127,7 +150,7 @@ if st.sidebar.button("Reset to Defaults"):
     if 'keywords' in st.session_state:
         del st.session_state.keywords
     # Rerun the app to apply the defaults
-    st.rerun()  # Changed from st.experimental_rerun() to st.rerun()
+    st.rerun()
 
 # File upload
 st.header("Upload Keywords")
@@ -306,9 +329,12 @@ edited_df = st.data_editor(
 )
 st.session_state.keywords = edited_df
 
-# What-If Analysis Tool
+# Calculate button
+calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
+
+# What-If Analysis Tool (moved below Calculate Forecast button)
 st.header("What-If Analysis")
-st.markdown("Analyze how changes in conversion rate impact your forecast.")
+st.markdown("Analyze how changes in conversion rate impact your forecast after calculating your initial forecast.")
 
 with st.expander("Adjust Conversion Rate"):
     col1, col2 = st.columns(2)
@@ -384,9 +410,6 @@ with st.expander("Adjust Conversion Rate"):
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
-
-# Calculate button
-calculate_button = st.button("Calculate Forecast", type="primary", use_container_width=True)
 
 if calculate_button:
     if len(st.session_state.keywords) > 0:
